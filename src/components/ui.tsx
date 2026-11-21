@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Rank, Tier } from "@/lib/types";
+import { RankBadge } from "@/components/ranks/RankBadge";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <section className={`rounded-xl border border-line bg-card p-4 ${className}`}>{children}</section>;
@@ -19,15 +20,16 @@ export function TierBadge({ tier, size = "sm" }: { tier: Tier; size?: "sm" | "lg
   const pad = size === "lg" ? "px-3 py-1 text-sm" : "px-2 py-0.5 text-[11px]";
   return (
     <span
-      className={`inline-flex items-center rounded-md border font-bold uppercase tracking-wider ${pad} ${tier.index === 8 ? "olympian-glow" : ""}`}
+      className={`inline-flex items-center gap-1.5 rounded-md border font-bold uppercase tracking-wider ${pad} ${tier.index === 8 ? "olympian-glow" : ""}`}
       style={{ color: tier.color, borderColor: `${tier.color}66`, background: `${tier.color}1a` }}
     >
+      <RankBadge tier={tier} size={size === "lg" ? 24 : 16} />
       {tier.name}
     </span>
   );
 }
 
-/** LP progress bar within the current tier. */
+/** Lift Points progress bar within the current tier. */
 export function LpBar({ rank, showLabel = true }: { rank: Rank; showLabel?: boolean }) {
   return (
     <div className="w-full">
@@ -36,7 +38,7 @@ export function LpBar({ rank, showLabel = true }: { rank: Rank; showLabel?: bool
       </div>
       {showLabel && (
         <div className="mt-1 flex justify-between text-[11px] text-muted tabular-nums">
-          <span>{rank.lp} LP</span>
+          <span>{rank.lp} Lift Points</span>
           <span>{rank.score} / 1000</span>
         </div>
       )}

@@ -34,8 +34,8 @@ export function E1rmChart({ range }: { range: Range }) {
   if (!id) {
     return (
       <Card>
-        <CardTitle>Estimated 1RM</CardTitle>
-        <p className="text-sm text-muted">Log a workout to see your e1RM progress.</p>
+        <CardTitle>Estimated One-Rep Max</CardTitle>
+        <p className="text-sm text-muted">Log a workout to see your Estimated One-Rep Max progress.</p>
       </Card>
     );
   }
@@ -70,7 +70,7 @@ export function E1rmChart({ range }: { range: Range }) {
           </select>
         }
       >
-        Estimated 1RM
+        Estimated One-Rep Max
       </CardTitle>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <div className="text-3xl font-bold tabular-nums">
@@ -96,7 +96,7 @@ export function E1rmChart({ range }: { range: Range }) {
               <CartesianGrid stroke={GRID} vertical={false} />
               <XAxis dataKey="label" tick={TICK} stroke={GRID} minTickGap={30} />
               <YAxis domain={[lo, hi]} tick={TICK} stroke={GRID} width={38} tickCount={5} allowDecimals={false} />
-              <Tooltip {...TOOLTIP} formatter={(v) => [`${v} lb`, "e1RM"]} />
+              <Tooltip {...TOOLTIP} formatter={(v) => [`${v} lb`, "One-Rep Max"]} />
               {lines.map(({ t, y }) => (
                 <ReferenceLine
                   key={t.name}
@@ -108,7 +108,7 @@ export function E1rmChart({ range }: { range: Range }) {
                   label={{ value: `${t.name} ${y}`, fill: t.color, fontSize: 10, position: "insideTopLeft" }}
                 />
               ))}
-              <Area type="monotone" dataKey="e1rm" stroke={tier.color} strokeWidth={2} fill={`url(#${gid})`} dot={false} />
+              <Area type="monotone" dataKey="e1rm" name="One-Rep Max" stroke={tier.color} strokeWidth={2} fill={`url(#${gid})`} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         )}

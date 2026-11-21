@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { computeStreak } from "@/lib/gamification";
+import { petProgress } from "@/lib/pet";
 import { exerciseBests, muscleRanks, overallRank } from "@/lib/stats";
 import { useStore } from "./useStore";
 
@@ -28,7 +29,14 @@ export function useRanks() {
 
 export function useStreak() {
   const workouts = useStore((s) => s.workouts);
-  const revives = useStore((s) => s.revives);
   const now = useNow();
-  return useMemo(() => computeStreak(workouts, revives, now), [workouts, revives, now]);
+  return useMemo(() => computeStreak(workouts, now), [workouts, now]);
+}
+
+/** Pet level and evolution stage, derived from workout history. */
+export function usePet() {
+  const workouts = useStore((s) => s.workouts);
+  const profile = useStore((s) => s.profile);
+  const name = useStore((s) => s.petName);
+  return { name, ...useMemo(() => petProgress(workouts, profile), [workouts, profile]) };
 }

@@ -7,14 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:dashes": "node scripts/check-dashes.mjs"
+    "lint:dashes": "node scripts/check-dashes.mjs",
+    "lint:ui": "node scripts/check-dashes.mjs"
   },
   "dependencies": {
+    "@types/three": "^0.187.0",
     "lucide-react": "^1.76.0",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "recharts": "^3.11.0",
+    "three": "^0.187.0",
     "zustand": "^5.1.0"
   },
   "devDependencies": {

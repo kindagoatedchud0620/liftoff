@@ -2,10 +2,11 @@
 
 import { useNow } from "@/store/derived";
 
-export const RANGES = ["1M", "3M", "6M", "1Y", "ALL"] as const;
+export const RANGES = ["1m", "3m", "6m", "1y", "all"] as const;
 export type Range = (typeof RANGES)[number];
+export const RANGE_LABELS: Record<Range, string> = { "1m": "1 Month", "3m": "3 Months", "6m": "6 Months", "1y": "1 Year", all: "All Time" };
 
-const DAYS: Record<Range, number> = { "1M": 30, "3M": 91, "6M": 182, "1Y": 365, ALL: 0 };
+const DAYS: Record<Range, number> = { "1m": 30, "3m": 91, "6m": 182, "1y": 365, all: 0 };
 
 /** Epoch ms cutoff for a range (0 = no cutoff). */
 export function useCutoff(range: Range): number {

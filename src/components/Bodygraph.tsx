@@ -173,7 +173,7 @@ export default function Bodygraph({ muscles }: { muscles: Record<Muscle, MuscleR
                 <div className="border-t border-line pt-3 text-sm">
                   <div className="text-[11px] uppercase tracking-wider text-muted">Top exercise</div>
                   <div className="font-semibold">{top.name}</div>
-                  <div className="text-muted tabular-nums">Best e1RM {Math.round(topBest.e1rm)} lb</div>
+                  <div className="text-muted tabular-nums">Best Estimated One-Rep Max {Math.round(topBest.e1rm)} lb</div>
                 </div>
               )}
             </div>

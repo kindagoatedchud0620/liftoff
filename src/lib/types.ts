@@ -77,7 +77,6 @@ export interface Profile {
   name: string;
   sex: Sex;
   bodyweight: number; // lb
-  equippedTitle: string | null;
 }
 
 export type TierName =
@@ -103,4 +102,12 @@ export interface Rank {
   score: number; // 1..1000
   tier: Tier;
   lp: number; // 0..100 progress to next tier
+}
+
+/** A tier promotion shown by the rank-up overlay (an exercise or the Overall Liftoff Rank). */
+export interface RankUpEvent {
+  label: string;
+  from: Rank;
+  to: Rank;
+  xp: number; // Experience Points the pet earns once the workout is finished
 }

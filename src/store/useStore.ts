@@ -4,35 +4,34 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { buildSeed } from "@/data/seed";
 import { EXERCISE_MAP } from "@/data/exercises";
-import { EGGS, SHOP } from "@/lib/gamification";
+import { petProgress } from "@/lib/pet";
 import { rankFromE1rm, setE1rm } from "@/lib/ranking";
-import { exerciseBests } from "@/lib/stats";
+import { exerciseBests, overallRank } from "@/lib/stats";
 import type { Measurement, Profile, Workout, WorkoutSet } from "@/lib/types";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
 export interface FinishResult {
-  eggs: number;
-  prs: number;
+  xp: number;
+  records: number;
   rankUps: number;
-  doubled: boolean;
+  overallRankUp: boolean;
+  levelBefore: number;
+  levelAfter: number;
 }
 
 export interface State {
   seeded: boolean;
   profile: Profile;
+  petName: string;
   workouts: Workout[];
   measurements: Measurement[];
-  eggs: number;
-  ownedTitles: string[];
-  doubleEggs: boolean;
-  revives: string[];
-  claimedQuests: string[];
   active: Workout | null;
   rest: { endsAt: number | null; duration: number };
 
   seed: () => void;
   updateProfile: (p: Partial<Profile>) => void;
+  setPetName: (name: string) => void;
   addMeasurement: (m: Measurement) => void;
 
   startWorkout: () => void;
@@ -47,13 +46,9 @@ export interface State {
   startRest: (seconds?: number) => void;
   adjustRest: (deltaSeconds: number) => void;
   stopRest: () => void;
-
-  claimQuest: (key: string, reward: number) => void;
-  buy: (itemId: string) => boolean;
-  equipTitle: (title: string | null) => void;
 }
 
-const DEFAULT_PROFILE: Profile = { name: "Athlete", sex: "male", bodyweight: 180, equippedTitle: null };
+const DEFAULT_PROFILE: Profile = { name: "Athlete", sex: "male", bodyweight: 180 };
 
 export const useStore = create<State>()(
   persist(
@@ -65,21 +60,18 @@ export const useStore = create<State>()(
       return {
         seeded: false,
         profile: DEFAULT_PROFILE,
+        petName: "Barbell",
         workouts: [],
         measurements: [],
-        eggs: 0,
-        ownedTitles: [],
-        doubleEggs: false,
-        revives: [],
-        claimedQuests: [],
         active: null,
         rest: { endsAt: null, duration: 90 },
 
         seed: () => {
-          const { workouts, measurements, profile, eggs } = buildSeed(Date.now());
-          set({ seeded: true, workouts, measurements, profile: { ...DEFAULT_PROFILE, ...profile }, eggs });
+          const { workouts, measurements, profile } = buildSeed(Date.now());
+          set({ seeded: true, workouts, measurements, profile: { ...DEFAULT_PROFILE, ...profile } });
         },
         updateProfile: (p) => set({ profile: { ...get().profile, ...p } }),
+        setPetName: (name) => set({ petName: name.trim().slice(0, 24) || "Barbell" }),
         addMeasurement: (m) => set({ measurements: [...get().measurements, m].sort((a, b) => a.date.localeCompare(b.date)) }),
 
         startWorkout: () => {
@@ -109,32 +101,41 @@ export const useStore = create<State>()(
           })),
 
         finishWorkout: () => {
-          const { active, workouts, profile, doubleEggs, eggs } = get();
+          const { active, workouts, profile } = get();
           if (!active) return null;
           const exercises = active.exercises
             .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done && s.reps > 0) }))
             .filter((e) => e.sets.length);
           if (!exercises.length) return null;
-          const started = Date.parse(active.date);
           const finished: Workout = {
             ...active,
             date: new Date().toISOString(),
             exercises,
-            durationMin: Math.max(1, Math.round((Date.now() - started) / 60000)),
+            durationMin: Math.max(1, Math.round((Date.now() - Date.parse(active.date)) / 60000)),
           };
+          const next = [...workouts, finished];
           const before = exerciseBests(workouts, profile);
-          const after = exerciseBests([...workouts, finished], profile);
-          let prs = 0;
+          const after = exerciseBests(next, profile);
+          let records = 0;
           let rankUps = 0;
           for (const id of Object.keys(after)) {
             const b = before[id];
-            if (b && after[id].e1rm > b.e1rm) prs++;
+            if (b && after[id].e1rm > b.e1rm) records++;
             if (b && after[id].rank.tier.index > b.rank.tier.index) rankUps++;
           }
-          const base = EGGS.workout + prs * EGGS.pr + rankUps * EGGS.rankUp;
-          const earned = doubleEggs ? base * 2 : base;
-          set({ workouts: [...workouts, finished], active: null, eggs: eggs + earned, doubleEggs: false, rest: { ...get().rest, endsAt: null } });
-          return { eggs: earned, prs, rankUps, doubled: doubleEggs };
+          const oBefore = overallRank(before);
+          const oAfter = overallRank(after);
+          const petBefore = petProgress(workouts, profile);
+          const petAfter = petProgress(next, profile);
+          set({ workouts: next, active: null, rest: { ...get().rest, endsAt: null } });
+          return {
+            xp: petAfter.xp - petBefore.xp,
+            records,
+            rankUps,
+            overallRankUp: !!oBefore && !!oAfter && oAfter.tier.index > oBefore.tier.index,
+            levelBefore: petBefore.level,
+            levelAfter: petAfter.level,
+          };
         },
         discardWorkout: () => set({ active: null }),
 
@@ -148,44 +149,27 @@ export const useStore = create<State>()(
           else set({ rest: { duration: Math.max(15, duration + delta), endsAt: null } });
         },
         stopRest: () => set({ rest: { ...get().rest, endsAt: null } }),
-
-        claimQuest: (key, reward) => {
-          const { claimedQuests, eggs } = get();
-          if (!claimedQuests.includes(key)) set({ claimedQuests: [...claimedQuests, key], eggs: eggs + reward });
-        },
-        buy: (itemId) => {
-          const item = SHOP.find((i) => i.id === itemId);
-          const s = get();
-          if (!item || s.eggs < item.price) return false;
-          if (item.kind === "title") {
-            if (s.ownedTitles.includes(item.name)) return false;
-            set({ eggs: s.eggs - item.price, ownedTitles: [...s.ownedTitles, item.name] });
-          } else if (item.kind === "double") {
-            if (s.doubleEggs) return false;
-            set({ eggs: s.eggs - item.price, doubleEggs: true });
-          } else {
-            set({ eggs: s.eggs - item.price, revives: [...s.revives, new Date().toISOString()] });
-          }
-          return true;
-        },
-        equipTitle: (title) => {
-          if (title === null || get().ownedTitles.includes(title)) set({ profile: { ...get().profile, equippedTitle: title } });
-        },
       };
     },
     {
       name: "liftoff-store",
-      version: 1,
+      version: 2,
+      // Version 1 carried the Egg economy; keep the training data, drop the rest.
+      migrate: (old) => {
+        const o = old as Partial<State>;
+        const { equippedTitle: _drop, ...profile } = (o.profile ?? DEFAULT_PROFILE) as Profile & { equippedTitle?: unknown };
+        void _drop;
+        return { seeded: o.seeded ?? false, profile, petName: "Barbell", workouts: o.workouts ?? [], measurements: o.measurements ?? [], active: o.active ?? null, rest: o.rest ?? { endsAt: null, duration: 90 } } as State;
+      },
       partialize: (s) => {
-        // Persist data only; actions are recreated.
-        const { seeded, profile, workouts, measurements, eggs, ownedTitles, doubleEggs, revives, claimedQuests, active, rest } = s;
-        return { seeded, profile, workouts, measurements, eggs, ownedTitles, doubleEggs, revives, claimedQuests, active, rest };
+        const { seeded, profile, petName, workouts, measurements, active, rest } = s;
+        return { seeded, profile, petName, workouts, measurements, active, rest };
       },
     },
   ),
 );
 
-/** Live rank of a single set against the exercise's prior best, used by the logger badge and rank-up modal. */
+/** Live rank of a single set, used by the logger badge and rank-up overlay. */
 export function liveSetRank(exerciseId: string, set: Pick<WorkoutSet, "weight" | "reps">, profile: Profile) {
   const ex = EXERCISE_MAP[exerciseId];
   const e1rm = setE1rm(ex, set, profile.bodyweight);

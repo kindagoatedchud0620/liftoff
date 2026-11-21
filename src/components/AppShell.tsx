@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { ChartLine, Egg, Flame, House, Plus, Trophy, User, type LucideIcon } from "lucide-react";
+import { ChartLine, Flame, House, PawPrint, Plus, User, type LucideIcon } from "lucide-react";
 import RestTimer from "@/components/tracker/RestTimer";
 import { TierBadge } from "@/components/ui";
-import { useRanks, useStreak } from "@/store/derived";
+import { useRanks, usePet, useStreak } from "@/store/derived";
 import { useStore } from "@/store/useStore";
 
 interface NavItem {
@@ -21,8 +21,8 @@ const NAV: NavItem[] = [
   { href: "/", label: "Home", short: "Home", icon: House },
   { href: "/gains", label: "Gains & Charts", short: "Gains", icon: ChartLine },
   { href: "/log", label: "Log Workout", short: "Log", icon: Plus },
-  { href: "/quests", label: "Quests & Shop", short: "Quests", icon: Trophy },
-  { href: "/profile", label: "Profile", short: "Profile", icon: User },
+  { href: "/companion", label: "Three-Dimensional Companion", short: "Companion", icon: PawPrint },
+  { href: "/profile", label: "Profile & Measurements", short: "Profile", icon: User },
 ];
 
 const isActive = (pathname: string, href: string) =>
@@ -35,8 +35,11 @@ function StreakChip() {
     : hoursLeft < 12
       ? "border-red-500/60 bg-red-500/15 text-red-400"
       : "border-line bg-card text-text";
+  const label = alive
+    ? `${count} day streak, ${Math.floor(hoursLeft)} hours left before it breaks`
+    : "Streak broken";
   return (
-    <div className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm font-bold tabular-nums ${tone}`} aria-label="Streak">
+    <div className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm font-bold tabular-nums ${tone}`} aria-label={label} title={label}>
       <Flame className={`size-4 ${alive ? "text-orange-400" : "text-muted"}`} aria-hidden />
       <span>{count}</span>
       <span className="text-xs font-semibold text-muted">{alive ? `${Math.floor(hoursLeft)}h` : "broken"}</span>
@@ -44,23 +47,14 @@ function StreakChip() {
   );
 }
 
-function EggChip() {
-  const eggs = useStore((s) => s.eggs);
-  return (
-    <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-card px-2.5 py-1 text-sm font-bold tabular-nums" aria-label="Eggs">
-      <Egg className="size-4 text-amber-300" aria-hidden />
-      <span>{eggs.toLocaleString("en-US")}</span>
-    </div>
-  );
-}
-
 function ProfileBlock() {
   const profile = useStore((s) => s.profile);
+  const pet = usePet();
   const { overall } = useRanks();
   return (
     <div className="rounded-xl border border-line bg-card p-3">
       <div className="truncate text-sm font-semibold">{profile.name}</div>
-      {profile.equippedTitle && <div className="truncate text-xs font-semibold text-accent">{profile.equippedTitle}</div>}
+      <div className="truncate text-xs font-semibold text-accent">{`${pet.name}, Level ${pet.level}`}</div>
       <div className="mt-2 flex items-center gap-2">
         {overall ? (
           <>
@@ -77,7 +71,6 @@ function ProfileBlock() {
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const equipped = useStore((s) => s.profile.equippedTitle);
   const title = NAV.find((n) => isActive(pathname, n.href))?.label ?? "Liftoff";
 
   return (
@@ -114,8 +107,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className="flex h-14 items-center gap-3 px-4 md:px-6">
             <div className="min-w-0 flex-1 truncate text-base font-bold tracking-wide">{title}</div>
             <StreakChip />
-            <EggChip />
-            {equipped && <span className="hidden max-w-40 truncate text-sm font-semibold text-accent md:block">{equipped}</span>}
           </div>
         </header>
 

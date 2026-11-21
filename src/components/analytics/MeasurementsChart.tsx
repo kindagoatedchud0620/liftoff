@@ -11,7 +11,7 @@ type Key = Exclude<keyof Measurement, "date">;
 // Bodyweight (lb) on the left axis; body fat (%) and tape measures (in) share the right axis.
 const METRICS: { key: Key; label: string; unit: string; color: string; axis: "l" | "r" }[] = [
   { key: "bodyweight", label: "Bodyweight", unit: "lb", color: "#38BDF8", axis: "l" },
-  { key: "bodyFat", label: "Body Fat %", unit: "%", color: "#F43F5E", axis: "r" },
+  { key: "bodyFat", label: "Body Fat Percentage", unit: "%", color: "#F43F5E", axis: "r" },
   { key: "waist", label: "Waist", unit: "in", color: "#FFD700", axis: "r" },
   { key: "chest", label: "Chest", unit: "in", color: "#818CF8", axis: "r" },
   { key: "biceps", label: "Biceps", unit: "in", color: "#F97316", axis: "r" },
@@ -70,7 +70,7 @@ export function MeasurementsChart({ range }: { range: Range }) {
             const d = +(last - data[0][m.key]).toFixed(1);
             return (
               <div key={m.key} className="rounded-lg bg-card-2 p-2">
-                <div className="truncate text-[11px] uppercase tracking-wider text-muted">{m.label}</div>
+                <div className="text-[11px] uppercase leading-tight tracking-wider text-muted">{m.label}</div>
                 <div className="font-bold tabular-nums">
                   {last} <span className="text-xs font-normal text-muted">{m.unit}</span>
                 </div>

@@ -7,23 +7,23 @@ import { MuscleRadar } from "@/components/analytics/MuscleRadar";
 import { OverallScoreChart } from "@/components/analytics/OverallScoreChart";
 import { PrFeed } from "@/components/analytics/PrFeed";
 import { VolumeChart } from "@/components/analytics/VolumeChart";
-import { RANGES, type Range } from "@/components/analytics/range";
+import { RANGES, RANGE_LABELS, type Range } from "@/components/analytics/range";
 
 export default function GainsPage() {
-  const [range, setRange] = useState<Range>("6M");
+  const [range, setRange] = useState<Range>("6m");
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">Gains</h1>
-        <div className="inline-flex rounded-lg border border-line bg-card p-0.5" role="group" aria-label="Time range">
+        <div className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-card p-0.5" role="group" aria-label="Time range">
           {RANGES.map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
               aria-pressed={range === r}
-              className={`rounded-md px-3 py-1 text-sm font-medium ${range === r ? "bg-accent text-bg" : "text-muted"}`}
+              className={`whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ${range === r ? "bg-accent text-bg" : "text-muted"}`}
             >
-              {r}
+              {RANGE_LABELS[r]}
             </button>
           ))}
         </div>

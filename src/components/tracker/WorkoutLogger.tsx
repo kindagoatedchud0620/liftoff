@@ -8,7 +8,8 @@ import { useNow } from "@/store/derived";
 import { fmtDate, fmtNum } from "@/components/ui";
 import ExerciseBlock from "./ExerciseBlock";
 import ExercisePicker from "./ExercisePicker";
-import RankUpModal, { type RankUp } from "./RankUpModal";
+import RankUpModal from "@/components/ranks/RankUpModal";
+import type { RankUpEvent } from "@/lib/types";
 
 function Overlay({ children, label }: { children: React.ReactNode; label: string }) {
   return (
@@ -27,7 +28,7 @@ export default function WorkoutLogger() {
   const discardWorkout = useStore((s) => s.discardWorkout);
   const now = useNow(1000);
   const [picker, setPicker] = useState(false);
-  const [rankUp, setRankUp] = useState<RankUp | null>(null);
+  const [queue, setQueue] = useState<RankUpEvent[]>([]);
   const [summary, setSummary] = useState<FinishResult | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
@@ -36,9 +37,11 @@ export default function WorkoutLogger() {
     <Overlay label="Workout complete">
       <h2 className="text-lg font-bold">Workout complete</h2>
       <dl className="my-4 space-y-2 text-sm tabular-nums">
-        <div className="flex justify-between"><dt className="text-muted">Eggs earned</dt><dd className="font-bold text-accent">+{summary.eggs}{summary.doubled ? " (2x)" : ""}</dd></div>
-        <div className="flex justify-between"><dt className="text-muted">PRs</dt><dd>{summary.prs}</dd></div>
-        <div className="flex justify-between"><dt className="text-muted">Rank-ups</dt><dd>{summary.rankUps}</dd></div>
+        <div className="flex justify-between"><dt className="text-muted">Experience Points earned</dt><dd className="font-bold text-accent">+{summary.xp}</dd></div>
+        <div className="flex justify-between"><dt className="text-muted">Personal Records</dt><dd>{summary.records}</dd></div>
+        <div className="flex justify-between"><dt className="text-muted">Rank ups</dt><dd>{summary.rankUps}</dd></div>
+        {summary.overallRankUp && <div className="flex justify-between"><dt className="text-muted">Overall Liftoff Rank up</dt><dd className="font-bold text-accent">Yes</dd></div>}
+        <div className="flex justify-between gap-2"><dt className="text-muted">Companion level {summary.levelBefore} to {summary.levelAfter}</dt>{summary.levelAfter > summary.levelBefore && <dd className="font-bold text-accent">Level up!</dd>}</div>
       </dl>
       <button autoFocus onClick={closeSummary} className="h-11 w-full rounded-lg bg-accent font-bold text-black">Done</button>
     </Overlay>
@@ -79,7 +82,7 @@ export default function WorkoutLogger() {
         <input aria-label="Workout name" value={active.name} onChange={(e) => rename(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent text-lg font-bold outline-none focus:border-line" />
         <span className="shrink-0 text-sm text-muted tabular-nums" aria-label="Elapsed time">{elapsed}</span>
       </div>
-      {active.exercises.map((we, i) => <ExerciseBlock key={`${we.exerciseId}-${i}`} exIdx={i} we={we} onRankUp={setRankUp} />)}
+      {active.exercises.map((we, i) => <ExerciseBlock key={`${we.exerciseId}-${i}`} exIdx={i} we={we} onRankUp={(ev) => setQueue((q) => [...q, ...ev])} />)}
       <button data-testid="add-exercise" onClick={() => setPicker(true)} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-card font-semibold hover:border-accent">
         <Plus size={18} />Add Exercise
       </button>
@@ -89,7 +92,7 @@ export default function WorkoutLogger() {
       <button onClick={() => setConfirmDiscard(true)} className="h-10 w-full text-sm text-red-400">Discard</button>
 
       {picker && <ExercisePicker onClose={() => setPicker(false)} />}
-      {rankUp && <RankUpModal up={rankUp} onClose={() => setRankUp(null)} />}
+      <RankUpModal event={queue[0] ?? null} onClose={() => setQueue((q) => q.slice(1))} />
       {confirmDiscard && (
         <Overlay label="Discard workout">
           <p className="font-semibold">Discard this workout?</p>

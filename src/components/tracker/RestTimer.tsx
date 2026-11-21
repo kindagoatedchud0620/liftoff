@@ -110,7 +110,7 @@ export default function RestTimer() {
       ) : open ? (
         <div className="w-60 rounded-xl border border-line bg-card p-3 shadow-xl">
           <div className="mb-2 flex items-center justify-between text-xs text-muted">
-            <span>Start rest (sec)</span>
+            <span>Start rest (seconds)</span>
             <button aria-label="Close rest timer" className="px-1 text-base leading-none" onClick={() => setOpen(false)}>x</button>
           </div>
           <div className="flex gap-1">

@@ -16,9 +16,9 @@ export function PrFeed({ range }: { range: Range }) {
 
   return (
     <Card className="lg:col-span-2">
-      <CardTitle>Recent PRs</CardTitle>
+      <CardTitle>Personal Records</CardTitle>
       {prs.length === 0 ? (
-        <p className="text-sm text-muted">No PRs in this range.</p>
+        <p className="text-sm text-muted">No records in this range.</p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
           {prs.map((p) => (
@@ -31,7 +31,7 @@ export function PrFeed({ range }: { range: Range }) {
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span className="rounded bg-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">
-                    {p.kind === "e1rm" ? "1RM PR" : "Volume PR"}
+                    {p.kind === "e1rm" ? "One-Rep Max Record" : "Volume Record"}
                   </span>
                   <span className="text-sm tabular-nums">
                     {fmtNum(p.value)} lb <span className="text-muted">vs {fmtNum(p.previous)}</span>{" "}

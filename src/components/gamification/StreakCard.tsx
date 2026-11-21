@@ -1,12 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { Flame, Snowflake } from "lucide-react";
 import { Card } from "@/components/ui";
-import { SHOP, STREAK_WINDOW_H } from "@/lib/gamification";
-import { useStore } from "@/store/useStore";
+import { STREAK_WINDOW_H } from "@/lib/gamification";
 import { useNow, useStreak } from "@/store/derived";
-
-const REVIVE = SHOP.find((i) => i.id === "streak-revive")!;
 
 function ago(iso: string, now: number) {
   const h = Math.floor((now - Date.parse(iso)) / 3_600_000);
@@ -18,13 +16,10 @@ function ago(iso: string, now: number) {
 export default function StreakCard() {
   const s = useStreak();
   const now = useNow();
-  const eggs = useStore((st) => st.eggs);
-  const buy = useStore((st) => st.buy);
   const h = Math.floor(s.hoursLeft);
   const m = Math.floor((s.hoursLeft - h) * 60);
   const color = s.hoursLeft > 36 ? "#22c55e" : s.hoursLeft > 12 ? "#f59e0b" : "#ef4444";
   const frozen = !s.alive;
-  const affordable = eggs >= REVIVE.price;
 
   return (
     <Card className={frozen ? "border-sky-400/40" : ""}>
@@ -47,14 +42,9 @@ export default function StreakCard() {
       ) : (
         <div className="mt-4">
           <div className="h-2 rounded-full bg-sky-400/20" />
-          {s.revivable ? (
-            <button disabled={!affordable} onClick={() => buy("streak-revive")} className="mt-3 h-11 w-full rounded-lg bg-sky-400 font-bold text-black disabled:opacity-40">
-              Revive streak ({REVIVE.price} Eggs)
-            </button>
-          ) : (
-            <p className="mt-2 text-xs text-muted">Log a workout to start a new streak.</p>
-          )}
-          {s.revivable && !affordable && <p className="mt-1 text-xs text-muted tabular-nums">Need {REVIVE.price - eggs} more Eggs.</p>}
+          <Link href="/log" className="mt-3 block rounded-lg bg-sky-400 px-4 py-2.5 text-center text-sm font-bold text-black hover:opacity-90">
+            Log a workout to start a new streak
+          </Link>
         </div>
       )}
     </Card>

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { MeasurementsChart } from "@/components/analytics/MeasurementsChart";
 import { Card, CardTitle } from "@/components/ui";
@@ -8,7 +7,7 @@ import { useStore } from "@/store/useStore";
 
 const FIELDS = [
   ["bodyweight", "Bodyweight (lb)"],
-  ["bodyFat", "Body fat (%)"],
+  ["bodyFat", "Body Fat Percentage"],
   ["waist", "Waist (in)"],
   ["chest", "Chest (in)"],
   ["biceps", "Biceps (in)"],
@@ -23,7 +22,7 @@ const today = () => {
 };
 
 export default function ProfilePage() {
-  const { profile, measurements, ownedTitles, updateProfile, addMeasurement, equipTitle } = useStore();
+  const { profile, measurements, updateProfile, addMeasurement } = useStore();
   const latest = measurements[measurements.length - 1];
   const [bw, setBw] = useState(String(profile.bodyweight));
   const [date, setDate] = useState(today);
@@ -103,28 +102,6 @@ export default function ProfilePage() {
       </Card>
 
       <Card>
-        <CardTitle>Title</CardTitle>
-        {ownedTitles.length === 0 ? (
-          <p className="text-sm text-muted">
-            No titles yet. <Link href="/quests" className="text-accent underline">Buy some in Quests</Link>.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {[null, ...ownedTitles].map((t) => (
-              <button
-                key={t ?? "none"}
-                onClick={() => equipTitle(t)}
-                aria-pressed={profile.equippedTitle === t}
-                className={`rounded-full border px-3 py-1 text-sm ${profile.equippedTitle === t ? "border-accent bg-accent/15 text-accent" : "border-line text-muted"}`}
-              >
-                {t ?? "None"}
-              </button>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      <Card>
         <CardTitle>Log measurement</CardTitle>
         <form onSubmit={submit} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <label className="col-span-2 text-xs text-muted sm:col-span-3">
@@ -156,7 +133,7 @@ export default function ProfilePage() {
         )}
       </Card>
 
-      <MeasurementsChart range="ALL" />
+      <MeasurementsChart range="all" />
 
       <Card>
         <CardTitle>Recent measurements</CardTitle>
@@ -165,11 +142,11 @@ export default function ProfilePage() {
             <thead className="text-[11px] uppercase tracking-wider text-muted">
               <tr>
                 <th className="py-1 pr-3">Date</th>
-                <th className="pr-3">BW</th>
-                <th className="pr-3">BF%</th>
+                <th className="pr-3">Bodyweight</th>
+                <th className="pr-3">Body Fat Percentage</th>
                 <th className="pr-3">Waist</th>
                 <th className="pr-3">Chest</th>
-                <th className="pr-3">Bi</th>
+                <th className="pr-3">Biceps</th>
                 <th>Thigh</th>
               </tr>
             </thead>

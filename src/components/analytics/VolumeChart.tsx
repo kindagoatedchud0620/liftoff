@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { weeklyVolume } from "@/lib/stats";
 import { useStore } from "@/store/useStore";
 import { Card, CardTitle } from "@/components/ui";
 import { ACCENT, GRID, TICK, TOOLTIP, inRange, shortDate, useCutoff, type Range } from "./range";
 
+const RPE = "Average Rate of Perceived Exertion";
 const k = (v: number) => (v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : String(v));
 
 export function VolumeChart({ range }: { range: Range }) {
@@ -30,9 +31,10 @@ export function VolumeChart({ range }: { range: Range }) {
               <XAxis dataKey="label" tick={TICK} stroke={GRID} minTickGap={30} />
               <YAxis yAxisId="l" tick={TICK} stroke={GRID} width={34} tickFormatter={k} tickCount={5} />
               <YAxis yAxisId="r" orientation="right" domain={[6, 10]} tick={TICK} stroke={GRID} width={26} ticks={[6, 7, 8, 9, 10]} />
-              <Tooltip {...TOOLTIP} formatter={(v, name) => (name === "Tonnage" ? [`${Number(v).toLocaleString("en-US")} lb`, name] : [v, "Avg RPE"])} />
+              <Tooltip {...TOOLTIP} formatter={(v, name) => (name === "Tonnage" ? [`${Number(v).toLocaleString("en-US")} lb`, name] : [v, RPE])} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar yAxisId="l" dataKey="tonnage" name="Tonnage" fill={ACCENT} fillOpacity={0.55} radius={[3, 3, 0, 0]} />
-              <Line yAxisId="r" type="monotone" dataKey="avgRpe" name="Avg RPE" stroke="#F97316" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+              <Line yAxisId="r" type="monotone" dataKey="avgRpe" name={RPE} stroke="#F97316" strokeWidth={2} dot={{ r: 2 }} connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
         )}

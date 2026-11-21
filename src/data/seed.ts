@@ -83,7 +83,7 @@ const TEMPLATES: Record<DayType, Slot[]> = {
   ],
 };
 
-export function buildSeed(now: number): { workouts: Workout[]; measurements: Measurement[]; profile: Partial<Profile>; eggs: number } {
+export function buildSeed(now: number): { workouts: Workout[]; measurements: Measurement[]; profile: Partial<Profile> } {
   const rnd = mulberry32(0x5eed1f7);
 
   // Schedule backwards from the most recent workout (20h ago) with gaps of 2 days, and 1 day at each week break.
@@ -162,6 +162,5 @@ export function buildSeed(now: number): { workouts: Workout[]; measurements: Mea
     workouts,
     measurements,
     profile: { name: "Alex Rivera", sex: "male", bodyweight: 180 },
-    eggs: 420,
   };
 }
