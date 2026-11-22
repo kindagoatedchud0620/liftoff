@@ -7,7 +7,7 @@ import { EXERCISE_MAP } from "@/data/exercises";
 import { DEFAULT_COMPANION_NAME, petProgress } from "@/lib/pet";
 import { newlyUnlocked } from "@/lib/trophies";
 import type { ArenaId } from "@/lib/arenas";
-import { rankFromE1rm, setE1rm } from "@/lib/ranking";
+import { LIMITS, rankFromE1rm, rankFromScore, setE1rm } from "@/lib/ranking";
 import { exerciseBests, overallRank } from "@/lib/stats";
 import type { Measurement, Profile, Workout, WorkoutSet } from "@/lib/types";
 
@@ -36,6 +36,10 @@ export interface State {
   rest: { endsAt: number | null; duration: number };
 
   seed: () => void;
+  clearData: () => void;
+  /** Replaces all data from an exported backup. Returns false (and changes nothing) if it is not a valid backup. */
+  importData: (raw: unknown) => boolean;
+  deleteWorkout: (id: string) => void;
   updateProfile: (p: Partial<Profile>) => void;
   /** Returns false (and changes nothing) unless the trimmed name is 1 to 24 characters. */
   setCompanionName: (name: string) => boolean;
@@ -79,6 +83,15 @@ export const useStore = create<State>()(
           const { workouts, measurements, profile } = buildSeed(Date.now());
           set({ seeded: true, workouts, measurements, profile: { ...DEFAULT_PROFILE, ...profile } });
         },
+        clearData: () => set({ seeded: true, workouts: [], measurements: [], active: null }),
+        importData: (raw) => {
+          const o = (raw as { state?: unknown } | null)?.state;
+          if (!o || typeof o !== "object" || !Array.isArray((o as State).workouts)) return false;
+          const { workouts, measurements, profile, companionName, arenaId } = migrateState(o);
+          set({ seeded: true, workouts, measurements, profile, companionName, arenaId, active: null });
+          return true;
+        },
+        deleteWorkout: (id) => set({ workouts: get().workouts.filter((w) => w.id !== id) }),
         updateProfile: (p) => set({ profile: { ...get().profile, ...p } }),
         setArena: (id) => set({ arenaId: id }),
         setCompanionName: (name) => {
@@ -87,7 +100,13 @@ export const useStore = create<State>()(
           set({ companionName: clean });
           return true;
         },
-        addMeasurement: (m) => set({ measurements: [...get().measurements, m].sort((a, b) => a.date.localeCompare(b.date)) }),
+        addMeasurement: (m) => {
+          // One entry per day: a second save on the same date replaces the first.
+          const measurements = [...get().measurements.filter((x) => x.date !== m.date), m].sort((a, b) => a.date.localeCompare(b.date));
+          // Ranks use the profile bodyweight, so keep it in step with the newest measurement.
+          const newest = measurements[measurements.length - 1];
+          set({ measurements, profile: newest === m ? { ...get().profile, bodyweight: m.bodyweight } : get().profile });
+        },
 
         startWorkout: () => {
           if (!get().active) set({ active: { id: uid(), date: new Date().toISOString(), name: "Workout", exercises: [] } });
@@ -126,7 +145,7 @@ export const useStore = create<State>()(
             ...active,
             date: new Date().toISOString(),
             exercises,
-            durationMin: Math.max(1, Math.round((Date.now() - Date.parse(active.date)) / 60000)),
+            durationMin: Math.min(LIMITS.maxDurationMin, Math.max(1, Math.round((Date.now() - Date.parse(active.date)) / 60000))),
           };
           const next = [...workouts, finished];
           const before = exerciseBests(workouts, profile);
@@ -171,7 +190,7 @@ export const useStore = create<State>()(
     },
     {
       name: "liftoff-store",
-      version: 3,
+      version: 4, // v4: stored data is re-validated once by migrateState
       migrate: migrateState,
       partialize: (s) => {
         const { seeded, profile, companionName, arenaId, workouts, measurements, active, rest } = s;
@@ -184,8 +203,14 @@ export const useStore = create<State>()(
 // v1 carried the Egg economy (dropped); v2 stored the pet as petName with "Barbell" as its default.
 export function migrateState(old: unknown): State {
   const o = old as Partial<State> & { petName?: string };
-  const { equippedTitle: _drop, ...profile } = (o.profile ?? DEFAULT_PROFILE) as Profile & { equippedTitle?: unknown };
+  const { equippedTitle: _drop, ...rawProfile } = (o.profile ?? DEFAULT_PROFILE) as Profile & { equippedTitle?: unknown };
   void _drop;
+  const bw = Number(rawProfile.bodyweight);
+  const profile: Profile = { ...DEFAULT_PROFILE, ...rawProfile, bodyweight: bw >= LIMITS.minBodyweight && bw <= LIMITS.maxBodyweight ? bw : DEFAULT_PROFILE.bodyweight };
+  // Drop malformed workouts so one bad record cannot crash every page.
+  const okWorkout = (w: Workout) => w && typeof w.date === "string" && Array.isArray(w.exercises) && w.exercises.every((e) => Array.isArray(e?.sets));
+  o.workouts = (o.workouts ?? []).filter(okWorkout);
+  o.active = o.active && okWorkout(o.active) ? o.active : null;
   const custom = o.companionName ?? (o.petName && o.petName !== "Barbell" ? o.petName : undefined);
   return { seeded: o.seeded ?? false, profile, companionName: custom?.trim().slice(0, 24) || DEFAULT_COMPANION_NAME, arenaId: o.arenaId ?? null, workouts: o.workouts ?? [], measurements: o.measurements ?? [], active: o.active ?? null, rest: o.rest ?? { endsAt: null, duration: 90 } } as State;
 }
@@ -193,6 +218,7 @@ export function migrateState(old: unknown): State {
 /** Live rank of a single set, used by the logger badge and rank-up overlay. */
 export function liveSetRank(exerciseId: string, set: Pick<WorkoutSet, "weight" | "reps">, profile: Profile) {
   const ex = EXERCISE_MAP[exerciseId];
+  if (!ex) return { e1rm: 0, rank: rankFromScore(1) }; // exercise removed from the catalogue
   const e1rm = setE1rm(ex, set, profile.bodyweight);
   return { e1rm: Math.round(e1rm), rank: rankFromE1rm(ex, e1rm, profile.bodyweight, profile.sex) };
 }

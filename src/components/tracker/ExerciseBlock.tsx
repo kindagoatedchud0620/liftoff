@@ -2,7 +2,7 @@
 
 import { Check, Plus, Trash2 } from "lucide-react";
 import { EXERCISE_MAP } from "@/data/exercises";
-import { rankFromE1rm } from "@/lib/ranking";
+import { LIMITS, rankFromE1rm } from "@/lib/ranking";
 import { exerciseBests, overallRank } from "@/lib/stats";
 import { PET_XP } from "@/lib/pet";
 import type { RankUpEvent, WorkoutExercise, WorkoutSet } from "@/lib/types";
@@ -13,7 +13,7 @@ import { TierBadge } from "@/components/ui";
 import { RankBadge } from "@/components/ranks/RankBadge";
 
 const field = "h-11 w-full min-w-0 rounded-lg border border-line bg-card-2 px-1 text-center text-base tabular-nums outline-none placeholder:text-[10px] focus:border-accent";
-const num = (v: string) => (v === "" ? 0 : Math.max(0, parseFloat(v) || 0));
+const num = (v: string, max: number) => (v === "" ? 0 : Math.min(max, Math.max(0, parseFloat(v) || 0)));
 
 /** A record beats the prior best Estimated One-Rep Max or single-set volume. No prior history means no record. */
 export function isSetRecord(now: { e1rm: number; volume: number }, prior: { e1rm: number; volume: number }): boolean {
@@ -31,8 +31,8 @@ function SetRow({ exIdx, idx, set, exerciseId, onCheck }: { exIdx: number; idx: 
     <div className={`rounded-lg p-1 ${set.done ? "bg-accent/10" : ""}`}>
       <div className="grid grid-cols-[1.25rem_1fr_1fr_4.5rem_2.5rem_2rem] items-center gap-1.5">
         <span className="text-center text-xs text-muted tabular-nums">{idx + 1}</span>
-        <input data-testid="set-weight" type="number" inputMode="decimal" min={0} step="any" placeholder="Weight (lb)" aria-label={`Set ${idx + 1} weight in pounds`} className={field} value={set.weight || ""} onChange={(e) => updateSet(exIdx, idx, { weight: num(e.target.value) })} />
-        <input data-testid="set-reps" type="number" inputMode="numeric" min={0} step={1} placeholder="Reps" aria-label={`Set ${idx + 1} reps`} className={field} value={set.reps || ""} onChange={(e) => updateSet(exIdx, idx, { reps: Math.floor(num(e.target.value)) })} />
+        <input data-testid="set-weight" type="number" inputMode="decimal" min={0} max={LIMITS.maxWeight} step="any" placeholder="Weight (lb)" aria-label={`Set ${idx + 1} weight in pounds`} className={field} value={set.weight || ""} onChange={(e) => updateSet(exIdx, idx, { weight: num(e.target.value, LIMITS.maxWeight) })} />
+        <input data-testid="set-reps" type="number" inputMode="numeric" min={0} max={LIMITS.maxReps} step={1} placeholder="Reps" aria-label={`Set ${idx + 1} reps`} className={field} value={set.reps || ""} onChange={(e) => updateSet(exIdx, idx, { reps: Math.floor(num(e.target.value, LIMITS.maxReps)) })} />
         <input data-testid="set-rpe" type="number" inputMode="decimal" min={6} max={10} step={0.5} placeholder="Exertion" aria-label={`Set ${idx + 1} Rate of Perceived Exertion`} className={field} value={set.rpe ?? ""} onChange={(e) => updateSet(exIdx, idx, { rpe: e.target.value === "" ? undefined : Math.min(10, Math.max(6, parseFloat(e.target.value) || 6)) })} />
         <button data-testid="set-check" aria-label={set.done ? `Uncheck set ${idx + 1}` : `Complete set ${idx + 1}`} aria-pressed={set.done} onClick={() => onCheck(idx)} className={`flex h-11 items-center justify-center rounded-lg border ${set.done ? "border-accent bg-accent text-black" : "border-line text-muted"}`}>
           <Check size={18} />
@@ -66,7 +66,8 @@ export default function ExerciseBlock({ exIdx, we, onRankUp }: { exIdx: number; 
     const { active, workouts } = useStore.getState();
     updateSet(exIdx, idx, { done: true });
     startRest();
-    if (s.reps <= 0 || !ex) return;
+    // Nothing to celebrate for an empty set (0 weight on a non-bodyweight move) or a removed exercise.
+    if (s.reps <= 0 || !ex || liveSetRank(we.exerciseId, s, profile).e1rm <= 0) return;
     // History plus every other done set of this exercise in the workout (the checked set is still undone in this snapshot).
     const prior = { e1rm: 0, volume: 0 };
     for (const w of active ? [...workouts, active] : workouts)

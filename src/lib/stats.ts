@@ -146,8 +146,9 @@ export function overallHistory(workouts: Workout[], profile: Profile) {
   const sorted = [...workouts].sort(byDate);
   const weeks = [...new Set(sorted.map((w) => weekKey(w.date)))];
   return weeks.map((week) => {
-    const end = new Date(week);
-    end.setDate(end.getDate() + 7);
+    // Build from local parts: new Date("YYYY-MM-DD") is UTC midnight, which is the previous evening in the Americas.
+    const [y, m, d] = week.split("-").map(Number);
+    const end = new Date(y, m - 1, d + 7);
     const upTo = sorted.filter((w) => new Date(w.date) < end);
     return { week, score: overallRank(exerciseBests(upTo, profile))?.score ?? 0 };
   });

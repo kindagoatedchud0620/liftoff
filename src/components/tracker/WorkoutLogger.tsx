@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useStore, type FinishResult } from "@/store/useStore";
 import { useNow } from "@/store/derived";
 import { fmtDate, fmtNum } from "@/components/ui";
@@ -28,6 +28,7 @@ export default function WorkoutLogger() {
   const startWorkout = useStore((s) => s.startWorkout);
   const finishWorkout = useStore((s) => s.finishWorkout);
   const discardWorkout = useStore((s) => s.discardWorkout);
+  const deleteWorkout = useStore((s) => s.deleteWorkout);
   const now = useNow(1000);
   const [picker, setPicker] = useState(false);
   const [queue, setQueue] = useState<RankUpEvent[]>([]);
@@ -38,7 +39,7 @@ export default function WorkoutLogger() {
   const summaryModal = summary && <SessionSummaryModal result={summary} onClose={closeSummary} />;
 
   if (!active) {
-    const recent = [...workouts].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+    const recent = [...workouts].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
     return (
       <div className="mx-auto max-w-xl space-y-6 p-4">
         <button data-testid="start-workout" onClick={startWorkout} className="flex h-16 w-full items-center justify-center gap-2 rounded-xl bg-accent text-lg font-bold text-black">
@@ -50,7 +51,10 @@ export default function WorkoutLogger() {
             {recent.map((w) => (
               <li key={w.id} className="flex items-center justify-between gap-2 rounded-xl border border-line bg-card px-4 py-3 text-sm">
                 <div className="min-w-0"><div className="truncate font-semibold">{w.name}</div><div className="text-xs text-muted">{fmtDate(w.date)} | {w.exercises.length} exercises</div></div>
-                <div className="shrink-0 text-xs text-muted tabular-nums">{fmtNum(Math.round(w.exercises.reduce((n, e) => n + e.sets.reduce((a, s) => a + s.weight * s.reps, 0), 0)))} lb</div>
+                <div className="flex shrink-0 items-center gap-2 text-xs text-muted tabular-nums">
+                  {fmtNum(Math.round(w.exercises.reduce((n, e) => n + e.sets.reduce((a, s) => a + s.weight * s.reps, 0), 0)))} lb
+                  <button aria-label={`Delete ${w.name} from ${fmtDate(w.date)}`} onClick={() => { if (confirm(`Delete "${w.name}" from ${fmtDate(w.date)}? This cannot be undone.`)) deleteWorkout(w.id); }} className="flex h-9 w-9 items-center justify-center hover:text-red-400"><Trash2 size={15} /></button>
+                </div>
               </li>
             ))}
             {!recent.length && <li className="text-sm text-muted">No workouts yet.</li>}

@@ -6,18 +6,15 @@ import RankBadge3D, { TIER_TITLES } from "@/components/ranks/RankBadge3D";
 import { Card, CardTitle, LpBar } from "@/components/ui";
 import { useRanks } from "@/store/derived";
 import { useStore } from "@/store/useStore";
+import { LIMITS } from "@/lib/ranking";
 
 const FIELDS = [
   ["bodyweight", "Bodyweight (lb)"],
   ["bodyFat", "Body Fat Percentage"],
-  ["waist", "Waist (in)"],
-  ["chest", "Chest (in)"],
-  ["biceps", "Biceps (in)"],
-  ["thighs", "Thighs (in)"],
 ] as const;
 type F = (typeof FIELDS)[number][0];
 
-const input = "w-full rounded-md border border-line bg-card-2 px-3 py-2 text-sm tabular-nums outline-none focus:border-accent";
+const input = "w-full rounded-md border border-line bg-card-2 px-3 py-2 text-base tabular-nums outline-none focus:border-accent";
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -32,10 +29,6 @@ export default function ProfilePage() {
   const [form, setForm] = useState<Record<F, string>>(() => ({
     bodyweight: String(latest?.bodyweight ?? profile.bodyweight),
     bodyFat: latest ? String(latest.bodyFat) : "",
-    waist: latest ? String(latest.waist) : "",
-    chest: latest ? String(latest.chest) : "",
-    biceps: latest ? String(latest.biceps) : "",
-    thighs: latest ? String(latest.thighs) : "",
   }));
   const [error, setError] = useState("");
   const [toast, setToast] = useState(false);
@@ -43,13 +36,22 @@ export default function ProfilePage() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const nums = FIELDS.map(([k]) => Number(form[k]));
-    if (!date || nums.some((n) => !Number.isFinite(n) || n <= 0)) {
-      setError("Every value must be a number greater than 0.");
+    const [bodyweight, bodyFat] = nums;
+    if (!date || !Number.isFinite(bodyweight) || !Number.isFinite(bodyFat)) {
+      setError("Enter a date, bodyweight and body fat.");
+      return;
+    }
+    if (bodyweight < LIMITS.minBodyweight || bodyweight > LIMITS.maxBodyweight) {
+      setError(`Bodyweight must be ${LIMITS.minBodyweight} to ${LIMITS.maxBodyweight} lb.`);
+      return;
+    }
+    if (bodyFat <= 0 || bodyFat > LIMITS.maxBodyFat) {
+      setError(`Body fat must be above 0 and at most ${LIMITS.maxBodyFat}%.`);
       return;
     }
     setError("");
-    const [bodyweight, bodyFat, waist, chest, biceps, thighs] = nums;
-    addMeasurement({ date: new Date(`${date}T12:00:00`).toISOString(), bodyweight, bodyFat, waist, chest, biceps, thighs });
+    setBw(String(bodyweight));
+    addMeasurement({ date: new Date(`${date}T12:00:00`).toISOString(), bodyweight, bodyFat });
     setToast(true);
     setTimeout(() => setToast(false), 2500);
   };
@@ -58,6 +60,31 @@ export default function ProfilePage() {
     if (!confirm("Reset all demo data? This clears everything saved on this device.")) return;
     localStorage.removeItem("liftoff-store");
     location.reload();
+  };
+
+  const exportData = () => {
+    const blob = new Blob([localStorage.getItem("liftoff-store") ?? "{}"], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `liftoff-backup-${today()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const importData = async (file: File | undefined) => {
+    if (!file) return;
+    if (!confirm("Replace everything on this device with this backup?")) return;
+    let ok = false;
+    try {
+      ok = useStore.getState().importData(JSON.parse(await file.text()));
+    } catch {}
+    if (ok) setBw(String(useStore.getState().profile.bodyweight));
+    else alert("That file is not a Liftoff backup.");
+  };
+
+  const clearAll = () => {
+    if (!confirm("Delete all demo workouts and measurements and start with an empty log?")) return;
+    useStore.getState().clearData();
   };
 
   return (
@@ -122,7 +149,8 @@ export default function ProfilePage() {
               onChange={(e) => {
                 setBw(e.target.value);
                 const n = Number(e.target.value);
-                if (n > 0) updateProfile({ bodyweight: n });
+                // Wait for a plausible value so typing "180" never ranks you at 1 or 18 lb on the way.
+                if (n >= LIMITS.minBodyweight && n <= LIMITS.maxBodyweight) updateProfile({ bodyweight: n });
               }}
             />
           </label>
@@ -172,11 +200,7 @@ export default function ProfilePage() {
               <tr>
                 <th className="py-1 pr-3">Date</th>
                 <th className="pr-3">Bodyweight</th>
-                <th className="pr-3">Body Fat Percentage</th>
-                <th className="pr-3">Waist</th>
-                <th className="pr-3">Chest</th>
-                <th className="pr-3">Biceps</th>
-                <th>Thigh</th>
+                <th>Body Fat Percentage</th>
               </tr>
             </thead>
             <tbody>
@@ -184,11 +208,7 @@ export default function ProfilePage() {
                 <tr key={m.date} className="border-t border-line">
                   <td className="py-1 pr-3 whitespace-nowrap">{new Date(m.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</td>
                   <td className="pr-3">{m.bodyweight}</td>
-                  <td className="pr-3">{m.bodyFat}</td>
-                  <td className="pr-3">{m.waist}</td>
-                  <td className="pr-3">{m.chest}</td>
-                  <td className="pr-3">{m.biceps}</td>
-                  <td>{m.thighs}</td>
+                  <td>{m.bodyFat}</td>
                 </tr>
               ))}
             </tbody>
@@ -196,7 +216,17 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      <div className="text-center">
+      <div className="space-x-4 text-center">
+        <button onClick={exportData} className="text-xs text-muted underline">
+          Export backup
+        </button>
+        <label className="cursor-pointer text-xs text-muted underline">
+          Import backup
+          <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => { void importData(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>
+        <button onClick={clearAll} className="text-xs text-muted underline">
+          Clear demo data &amp; start fresh
+        </button>
         <button onClick={reset} className="text-xs text-muted underline">
           Reset demo data
         </button>

@@ -164,10 +164,6 @@ export function buildSeed(now: number): { workouts: Workout[]; measurements: Mea
       date: new Date(now - (12 - k) * 7 * DAY).toISOString(),
       bodyweight: r1(clamp(176 + 5 * t + n() * 0.8, 176, 181)),
       bodyFat: r1(clamp(18 - 2.5 * t + n() * 0.4, 15.5, 18)),
-      waist: r1(clamp(34 - 1.2 * t + n() * 0.2, 32.8, 34)),
-      chest: r1(clamp(41 + 1.2 * t + n() * 0.3, 41, 42.2)),
-      biceps: r1(clamp(15 + 0.6 * t + n() * 0.15, 15, 15.6)),
-      thighs: r1(clamp(23.4 + 0.9 * t + n() * 0.2, 23.4, 24.3)),
     };
   });
 

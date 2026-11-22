@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "lint:dashes": "node scripts/check-dashes.mjs",
-    "lint:ui": "node scripts/check-dashes.mjs"
+    "test": "TZ=America/New_York npx tsx --tsconfig tsconfig.json scripts/audit-check.mts && npx tsx --tsconfig tsconfig.json scripts/ranking-check.mts && npx tsx --tsconfig tsconfig.json scripts/record-check.mts && npx tsx --tsconfig tsconfig.json scripts/feats-check.mts && npx tsx --tsconfig tsconfig.json scripts/pet-check.mts && npx tsx --tsconfig tsconfig.json scripts/pet-anim-check.mts"
   },
   "dependencies": {
     "@types/three": "^0.187.0",

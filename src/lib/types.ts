@@ -67,10 +67,6 @@ export interface Measurement {
   date: string; // ISO timestamp
   bodyweight: number; // lb
   bodyFat: number; // %
-  waist: number; // in
-  chest: number; // in
-  biceps: number; // in
-  thighs: number; // in
 }
 
 export interface Profile {

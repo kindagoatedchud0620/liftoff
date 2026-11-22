@@ -8,20 +8,16 @@ import { Card, CardTitle } from "@/components/ui";
 import { GRID, TICK, TOOLTIP, inRange, shortDate, useCutoff, type Range } from "./range";
 
 type Key = Exclude<keyof Measurement, "date">;
-// Bodyweight (lb) on the left axis; body fat (%) and tape measures (in) share the right axis.
+// Bodyweight (lb) on the left axis; body fat (%) on the right.
 const METRICS: { key: Key; label: string; unit: string; color: string; axis: "l" | "r" }[] = [
   { key: "bodyweight", label: "Bodyweight", unit: "lb", color: "#38BDF8", axis: "l" },
   { key: "bodyFat", label: "Body Fat Percentage", unit: "%", color: "#F43F5E", axis: "r" },
-  { key: "waist", label: "Waist", unit: "in", color: "#FFD700", axis: "r" },
-  { key: "chest", label: "Chest", unit: "in", color: "#818CF8", axis: "r" },
-  { key: "biceps", label: "Biceps", unit: "in", color: "#F97316", axis: "r" },
-  { key: "thighs", label: "Thighs", unit: "in", color: "#34D399", axis: "r" },
 ];
 
 export function MeasurementsChart({ range }: { range: Range }) {
   const all = useStore((s) => s.measurements);
   const cutoff = useCutoff(range);
-  const [on, setOn] = useState<Key[]>(["bodyweight", "waist"]);
+  const [on, setOn] = useState<Key[]>(["bodyweight", "bodyFat"]);
   const data = useMemo(() => all.filter((m) => inRange(m.date, cutoff)).map((m) => ({ ...m, label: shortDate(m.date) })), [all, cutoff]);
   const active = METRICS.filter((m) => on.includes(m.key));
   const toggle = (k: Key) => setOn((o) => (o.includes(k) ? o.filter((x) => x !== k) : [...o, k]));

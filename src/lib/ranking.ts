@@ -22,6 +22,8 @@ export const TIERS: Tier[] = TIER_DEFS.map(([name, color], i) => ({
 }));
 
 export const MAX_SCORE = 1000;
+/** Input bounds: stops typos like 3150 lb from becoming permanent records and rank inflation. */
+export const LIMITS = { maxWeight: 2000, maxReps: 100, minBodyweight: 50, maxBodyweight: 700, maxBodyFat: 70, maxDurationMin: 240 };
 const REF_BW: Record<Sex, number> = { male: 180, female: 140 };
 // Female elite ratios relative to male standards.
 const SEX_FACTOR: Record<Sex, { upper: number; lower: number }> = {
