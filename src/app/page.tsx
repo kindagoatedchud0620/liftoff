@@ -6,6 +6,7 @@ import Bodygraph from "@/components/Bodygraph";
 import StreakCard from "@/components/gamification/StreakCard";
 import PetCard from "@/components/pet/PetCard";
 import RankBadge3D, { TIER_TITLES } from "@/components/ranks/RankBadge3D";
+import TrophySummary from "@/components/trophies/TrophySummary";
 import { Card, CardTitle, fmtDate, fmtNum, LpBar, Stat, TierBadge } from "@/components/ui";
 import { EXERCISE_MAP } from "@/data/exercises";
 import { nextTier } from "@/lib/ranking";
@@ -74,6 +75,7 @@ export default function Home() {
       <div className="flex flex-col gap-4 lg:col-span-4">
         <StreakCard />
         <PetCard />
+        <TrophySummary />
         <Link
           href="/log"
           className="rounded-xl bg-accent px-4 py-3 text-center text-base font-bold text-bg transition-opacity hover:opacity-90"

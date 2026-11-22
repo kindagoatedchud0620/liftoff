@@ -63,9 +63,11 @@ interface Props {
   assemble?: boolean;
   className?: string;
   label?: string;
+  /** Keep the last frame readable (toDataURL / image export). Costs a little GPU bandwidth; off by default. */
+  preserveDrawingBuffer?: boolean;
 }
 
-export function RankBadge3D({ tier, size = 200, interactive = true, assemble = false, className = "", label }: Props) {
+export function RankBadge3D({ tier, size = 200, interactive = true, assemble = false, className = "", label, preserveDrawingBuffer = false }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const apiRef = useRef<Api | null>(null);
@@ -83,7 +85,7 @@ export function RankBadge3D({ tier, size = 200, interactive = true, assemble = f
 
     let renderer: WebGLRenderer;
     try {
-      renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer });
     } catch {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFailed(true);
@@ -330,6 +332,7 @@ export function RankBadge3D({ tier, size = 200, interactive = true, assemble = f
       pmrem.dispose();
       renderer.dispose(); // no forceContextLoss: a lost context cannot be reused after a Strict Mode remount
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- preserveDrawingBuffer is a creation-time option, read once at mount
   }, []);
 
   useEffect(() => {

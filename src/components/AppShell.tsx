@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { ChartLine, Flame, House, PawPrint, Plus, User, type LucideIcon } from "lucide-react";
+import { ChartLine, Flame, House, PawPrint, Plus, Trophy, User, type LucideIcon } from "lucide-react";
 import RestTimer from "@/components/tracker/RestTimer";
 import { TierBadge } from "@/components/ui";
 import { useRanks, usePet, useStreak } from "@/store/derived";
@@ -16,14 +16,16 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-// Order is the mobile tab order: the Log button sits in the centre slot.
+// Order is the mobile tab order. The Log button is always centred: tabs before it fill the left half, tabs after it the right.
 const NAV: NavItem[] = [
   { href: "/", label: "Home", short: "Home", icon: House },
   { href: "/gains", label: "Gains & Charts", short: "Gains", icon: ChartLine },
   { href: "/log", label: "Log Workout", short: "Log", icon: Plus },
   { href: "/companion", label: "Three-Dimensional Companion", short: "Companion", icon: PawPrint },
+  { href: "/trophies", label: "Trophy Case", short: "Trophies", icon: Trophy },
   { href: "/profile", label: "Profile & Measurements", short: "Profile", icon: User },
 ];
+const LOG_INDEX = NAV.findIndex((n) => n.href === "/log");
 
 const isActive = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
@@ -66,6 +68,22 @@ function ProfileBlock() {
         )}
       </div>
     </div>
+  );
+}
+
+function MobileTab({ item, active }: { item: NavItem; active: boolean }) {
+  const { href, short, icon: Icon } = item;
+  return (
+    <li className="flex justify-center">
+      <Link
+        href={href}
+        aria-current={active ? "page" : undefined}
+        className={`flex min-w-11 flex-col items-center gap-0.5 px-0.5 py-1 text-[10px] font-semibold whitespace-nowrap ${active ? "text-accent" : "text-muted"}`}
+      >
+        <Icon className="size-5" aria-hidden />
+        {short}
+      </Link>
+    </li>
   );
 }
 
@@ -118,36 +136,27 @@ export default function AppShell({ children }: { children: ReactNode }) {
         className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card-2/95 backdrop-blur md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <ul className="mx-auto grid h-16 max-w-md grid-cols-5 items-center">
-          {NAV.map(({ href, short, icon: Icon }) => {
-            const active = isActive(pathname, href);
-            if (href === "/log") {
-              return (
-                <li key={href} className="flex justify-center">
-                  <Link
-                    href={href}
-                    aria-label="Log workout"
-                    className="-translate-y-4 flex size-14 items-center justify-center rounded-full bg-accent text-bg shadow-lg shadow-accent/30"
-                  >
-                    <Icon className="size-7" aria-hidden />
-                  </Link>
-                </li>
-              );
-            }
-            return (
-              <li key={href} className="flex justify-center">
-                <Link
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex flex-col items-center gap-0.5 px-1 py-1 text-[10px] font-semibold ${active ? "text-accent" : "text-muted"}`}
-                >
-                  <Icon className="size-5" aria-hidden />
-                  {short}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="mx-auto flex h-16 max-w-md items-center">
+          <ul className="flex flex-1 justify-around">
+            {NAV.slice(0, LOG_INDEX).map((item) => (
+              <MobileTab key={item.href} item={item} active={isActive(pathname, item.href)} />
+            ))}
+          </ul>
+          <div className="flex w-14 shrink-0 justify-center">
+            <Link
+              href="/log"
+              aria-label="Log workout"
+              className="-translate-y-4 flex size-14 items-center justify-center rounded-full bg-accent text-bg shadow-lg shadow-accent/30"
+            >
+              <Plus className="size-7" aria-hidden />
+            </Link>
+          </div>
+          <ul className="flex flex-1 justify-around">
+            {NAV.slice(LOG_INDEX + 1).map((item) => (
+              <MobileTab key={item.href} item={item} active={isActive(pathname, item.href)} />
+            ))}
+          </ul>
+        </div>
       </nav>
 
       <RestTimer />

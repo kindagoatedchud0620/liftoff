@@ -31,7 +31,9 @@ interface Plan {
 type Slot = Plan | { alt: [Plan, Plan] }; // alt rotates week to week, so both variants get trained
 type DayType = "Push" | "Pull" | "Legs" | "Upper";
 
-const DAY_TYPES: DayType[] = ["Push", "Pull", "Legs", "Upper"];
+// Ordered so the last four sessions run Pull, Upper, Legs (32h ago), Push (14h ago): the recovery heatmap then shows
+// pushing muscles at peak, legs in active recovery and pulling muscles (biceps, rear delts) fully rested on first load.
+const DAY_TYPES: DayType[] = ["Pull", "Upper", "Legs", "Push"];
 
 const TEMPLATES: Record<DayType, Slot[]> = {
   Push: [
@@ -86,15 +88,26 @@ const TEMPLATES: Record<DayType, Slot[]> = {
 export function buildSeed(now: number): { workouts: Workout[]; measurements: Measurement[]; profile: Partial<Profile> } {
   const rnd = mulberry32(0x5eed1f7);
 
-  // Schedule backwards from the most recent workout (20h ago) with gaps of 2 days, and 1 day at each week break.
-  const dates: Date[] = new Array(N_WORKOUTS);
-  dates[N_WORKOUTS - 1] = new Date(now - 20 * HOUR);
-  for (let i = N_WORKOUTS - 2; i >= 0; i--) {
-    const d = new Date(dates[i + 1]);
-    d.setDate(d.getDate() - (i % 4 === 3 ? 1 : 2));
-    d.setHours(18 + Math.floor(rnd() * 2), Math.floor(rnd() * 60), 0, 0);
-    dates[i] = d;
+  // The latest session is 14h ago and the one before it 32h ago (Push then Legs). The session before that (Upper)
+  // must sit more than 48h back so its muscles read as rested. Earlier sessions fall on a calendar template of
+  // Tuesday, Thursday, Saturday and Sunday evenings: every week gets a weekend session and no gap exceeds about 50h.
+  const latest = new Date(now - 14 * HOUR);
+  const previous = new Date(now - 32 * HOUR);
+  const cutoff = previous.getTime() - 17 * HOUR; // keeps the Upper session at least 49h before now, whatever weekday now is
+  const monday = new Date(latest);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const template: Date[] = [];
+  for (let w = 0; w < 14; w++) {
+    for (const off of [1, 3, 5, 6]) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() - 7 * w + off);
+      d.setHours(18 + Math.floor(rnd() * 2), Math.floor(rnd() * 60), 0, 0);
+      if (d.getTime() < cutoff) template.push(d);
+    }
   }
+  template.sort((a, b) => a.getTime() - b.getTime());
+  const dates: Date[] = [...template.slice(-(N_WORKOUTS - 2)), previous, latest];
 
   const seen = new Map<string, number>();
 

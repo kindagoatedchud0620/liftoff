@@ -5,6 +5,7 @@ import { persist } from "zustand/middleware";
 import { buildSeed } from "@/data/seed";
 import { EXERCISE_MAP } from "@/data/exercises";
 import { DEFAULT_COMPANION_NAME, petProgress } from "@/lib/pet";
+import { newlyUnlocked } from "@/lib/trophies";
 import { rankFromE1rm, setE1rm } from "@/lib/ranking";
 import { exerciseBests, overallRank } from "@/lib/stats";
 import type { Measurement, Profile, Workout, WorkoutSet } from "@/lib/types";
@@ -12,6 +13,8 @@ import type { Measurement, Profile, Workout, WorkoutSet } from "@/lib/types";
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
 export interface FinishResult {
+  workout: Workout; // the saved session, completed sets only
+  newTrophies: string[]; // names of feats this session unlocked
   xp: number;
   records: number;
   rankUps: number;
@@ -133,8 +136,11 @@ export const useStore = create<State>()(
           const oAfter = overallRank(after);
           const petBefore = petProgress(workouts, profile);
           const petAfter = petProgress(next, profile);
+          const newTrophies = newlyUnlocked(workouts, next, profile);
           set({ workouts: next, active: null, rest: { ...get().rest, endsAt: null } });
           return {
+            workout: finished,
+            newTrophies,
             xp: petAfter.xp - petBefore.xp,
             records,
             rankUps,

@@ -3,12 +3,30 @@
 import { useMemo, useState } from "react";
 import { EXERCISE_MAP } from "@/data/exercises";
 import { TIERS } from "@/lib/ranking";
+import { muscleRecovery, RECOVERY_STYLE, type RecoveryStatus } from "@/lib/recovery";
 import { MUSCLE_LABELS, MUSCLES, type MuscleRank } from "@/lib/stats";
 import type { Muscle } from "@/lib/types";
-import { useRanks } from "@/store/derived";
+import { useNow, useRanks } from "@/store/derived";
+import { useStore } from "@/store/useStore";
 import { LpBar, TierBadge } from "./ui";
 
 type View = "front" | "back";
+type Mode = "rank" | "recovery";
+const MODE_KEY = "liftoff-bodygraph-mode";
+const MODES: { id: Mode; label: string }[] = [
+  { id: "rank", label: "Strength Rank" },
+  { id: "recovery", label: "Muscle Recovery" },
+];
+const STATUSES: RecoveryStatus[] = ["peak", "active", "rested"];
+
+const hoursAgo = (h: number) => {
+  const n = Math.round(h);
+  return n < 1 ? "less than an hour ago" : `${n} ${n === 1 ? "hour" : "hours"} ago`;
+};
+const hoursLeft = (h: number) => {
+  const n = Math.round(h);
+  return n < 1 ? "Less than an hour until fully rested" : `${n} ${n === 1 ? "hour" : "hours"} until fully rested`;
+};
 interface Region {
   m: Muscle;
   d: string;
@@ -54,32 +72,108 @@ const STATUS: Record<MuscleRank["status"], { label: string; cls: string }> = {
   untrained: { label: "Untrained", cls: "border-line bg-card-2 text-muted" },
 };
 
+function Pair({ d, extra }: { d: string; extra: object }) {
+  return (
+    <>
+      <path d={d} {...extra} />
+      <path d={d} transform={MIRROR} {...extra} />
+    </>
+  );
+}
+
+function BodyBase() {
+  return (
+    <g fill="#1F2937" stroke="#374151" strokeWidth="0.8" strokeLinejoin="round">
+      <ellipse cx="100" cy="28" rx="14" ry="17" />
+      <rect x="93" y="42" width="14" height="18" />
+      {Object.values(BASE).map((d) => (
+        <Pair key={d} d={d} extra={{}} />
+      ))}
+    </g>
+  );
+}
+
+/** Static front and back figures in one plain SVG (presentation attributes only) so it can be rasterized. */
+export function BodygraphMini({ muscles, color = "#F59E0B", height = 120 }: { muscles: Muscle[]; color?: string; height?: number }) {
+  const hit = new Set(muscles);
+  return (
+    <svg viewBox="0 0 400 420" height={height} width={(height * 400) / 420} role="img" aria-label="Muscles trained this session" xmlns="http://www.w3.org/2000/svg">
+      {[FRONT, BACK].map((regions, i) => (
+        <g key={i} transform={`translate(${i * 200} 0)`}>
+          <BodyBase />
+          {regions.map(({ m, d }) => (
+            <Pair
+              key={m}
+              d={d}
+              extra={hit.has(m) ? { fill: color, stroke: "#0b1220", strokeWidth: 0.6 } : { fill: "#374151", fillOpacity: 0.6, stroke: "#0b1220", strokeWidth: 0.6 }}
+            />
+          ))}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 export default function Bodygraph({ muscles }: { muscles: Record<Muscle, MuscleRank> }) {
   const { bests } = useRanks();
   const [view, setView] = useState<View>("front");
   const [picked, setPicked] = useState<Muscle | null>(null);
   const [hover, setHover] = useState<Muscle | null>(null);
+  // The app renders client-only behind HydrationGate, so reading storage on the first render is safe.
+  const [mode, setMode] = useState<Mode>(() => {
+    try {
+      return localStorage.getItem(MODE_KEY) === "recovery" ? "recovery" : "rank";
+    } catch {
+      return "rank";
+    }
+  });
+  const workouts = useStore((s) => s.workouts);
+  const now = useNow(60_000);
+  const recovery = useMemo(() => muscleRecovery(workouts, now), [workouts, now]);
+
+  const chooseMode = (m: Mode) => {
+    setMode(m);
+    try {
+      localStorage.setItem(MODE_KEY, m);
+    } catch {}
+  };
 
   const strongest = useMemo(
     () => MUSCLES.reduce((a, m) => ((muscles[m].rank?.score ?? 0) > (muscles[a].rank?.score ?? 0) ? m : a), MUSCLES[0]),
     [muscles],
   );
-  const sel = picked ?? strongest;
+  const mostRecent = useMemo(
+    () => MUSCLES.reduce((a, m) => ((recovery[m].hoursSince ?? Infinity) < (recovery[a].hoursSince ?? Infinity) ? m : a), MUSCLES[0]),
+    [recovery],
+  );
+  const isRec = mode === "recovery";
+  const sel = picked ?? (isRec ? mostRecent : strongest);
+  const rec = recovery[sel];
+  const recEx = rec.lastExerciseId ? EXERCISE_MAP[rec.lastExerciseId] : null;
   const info = muscles[sel];
   const top = info.topExerciseId ? EXERCISE_MAP[info.topExerciseId] : null;
   const topBest = info.topExerciseId ? bests[info.topExerciseId] : null;
   const st = STATUS[info.status];
 
   const regions = view === "front" ? FRONT : BACK;
-  const shapes = (d: string, extra: object) => (
-    <>
-      <path d={d} {...extra} />
-      <path d={d} transform={MIRROR} {...extra} />
-    </>
-  );
+  const shapes = (d: string, extra: object) => <Pair d={d} extra={extra} />;
 
   return (
     <div>
+      <div className="mb-3 flex w-full rounded-full border border-line bg-card-2 p-0.5 sm:inline-flex sm:w-auto" role="tablist" aria-label="Bodygraph mode">
+        {MODES.map(({ id, label }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={mode === id}
+            data-testid={`bodygraph-mode-${id}`}
+            onClick={() => chooseMode(id)}
+            className={`flex-1 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors sm:flex-none ${mode === id ? "bg-accent text-bg" : "text-muted hover:text-white"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="mb-3 inline-flex rounded-lg border border-line bg-card-2 p-0.5" role="tablist" aria-label="Body view">
         {(["front", "back"] as View[]).map((v) => (
           <button
@@ -105,24 +199,30 @@ export default function Bodygraph({ muscles }: { muscles: Record<Muscle, MuscleR
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
+              <filter id="peak-glow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="4" result="b" />
+                <feMerge>
+                  <feMergeNode in="b" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <style>{`@keyframes bg-peak-pulse{0%,100%{opacity:.7}50%{opacity:1}}.bg-peak{animation:bg-peak-pulse 2.4s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.bg-peak{animation:none}}`}</style>
             </defs>
-            <g fill="#1F2937" stroke="#374151" strokeWidth="0.8" strokeLinejoin="round">
-              <ellipse cx="100" cy="28" rx="14" ry="17" />
-              <rect x="93" y="42" width="14" height="18" />
-              {Object.values(BASE).map((d) => <g key={d}>{shapes(d, {})}</g>)}
-            </g>
+            <BodyBase />
             {regions.map(({ m, d }) => {
               const rank = muscles[m].rank;
+              const r = recovery[m];
               const active = hover === m || sel === m;
               return (
                 <g
                   key={m}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${MUSCLE_LABELS[m]}, ${rank ? rank.tier.name : "Untrained"}`}
+                  aria-label={isRec ? `${MUSCLE_LABELS[m]}, ${RECOVERY_STYLE[r.status].label}` : `${MUSCLE_LABELS[m]}, ${rank ? rank.tier.name : "Untrained"}`}
+                  data-recovery={isRec ? r.status : undefined}
                   aria-pressed={sel === m}
-                  className="cursor-pointer outline-none [&:focus-visible>path]:stroke-white"
-                  filter={rank?.tier.index === 8 ? "url(#olympian-glow)" : undefined}
+                  className={`cursor-pointer outline-none [&:focus-visible>path]:stroke-white${isRec && r.status === "peak" ? " bg-peak" : ""}`}
+                  filter={isRec ? (r.status === "peak" ? "url(#peak-glow)" : undefined) : rank?.tier.index === 8 ? "url(#olympian-glow)" : undefined}
                   onMouseEnter={() => {
                     setHover(m);
                     setPicked(m);
@@ -137,8 +237,8 @@ export default function Bodygraph({ muscles }: { muscles: Record<Muscle, MuscleR
                   }}
                 >
                   {shapes(d, {
-                    fill: rank ? rank.tier.color : "#374151",
-                    fillOpacity: rank ? (active ? 1 : 0.85) : 0.35,
+                    fill: isRec ? RECOVERY_STYLE[r.status].color : rank ? rank.tier.color : "#374151",
+                    fillOpacity: isRec ? (active ? 1 : 0.85) : rank ? (active ? 1 : 0.85) : 0.35,
                     stroke: active ? "#fff" : "#0b1220",
                     strokeWidth: active ? 1.4 : 0.6,
                     strokeLinejoin: "round",
@@ -147,16 +247,49 @@ export default function Bodygraph({ muscles }: { muscles: Record<Muscle, MuscleR
               );
             })}
           </svg>
-          <div className="mt-2 grid grid-cols-3 gap-x-2 gap-y-1">
-            {TIERS.map((t) => (
-              <div key={t.name} className="flex items-center gap-1 text-[10px] text-muted">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: t.color }} />
-                {t.name}
-              </div>
-            ))}
-          </div>
+          {isRec ? (
+            <div className="mt-2 space-y-1.5" data-testid="recovery-legend">
+              {STATUSES.map((k) => (
+                <div key={k} className="flex items-start gap-2 text-[11px] text-muted">
+                  <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: RECOVERY_STYLE[k].color }} />
+                  <span>
+                    <span className="font-semibold text-white">{RECOVERY_STYLE[k].label}</span>
+                    <br />
+                    {RECOVERY_STYLE[k].range}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-2 grid grid-cols-3 gap-x-2 gap-y-1">
+              {TIERS.map((t) => (
+                <div key={t.name} className="flex items-center gap-1 text-[10px] text-muted">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: t.color }} />
+                  {t.name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
+        {isRec ? (
+          <div className="w-full min-w-0 flex-1 rounded-xl border border-line bg-card-2 p-4" aria-live="polite" data-testid="recovery-detail">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-lg font-bold">{MUSCLE_LABELS[sel]}</h3>
+              <span
+                className="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                style={{ color: RECOVERY_STYLE[rec.status].color, borderColor: `${RECOVERY_STYLE[rec.status].color}66`, background: `${RECOVERY_STYLE[rec.status].color}26` }}
+              >
+                {RECOVERY_STYLE[rec.status].label}
+              </span>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="tabular-nums">{rec.hoursSince === null ? "Not trained yet" : `Trained ${hoursAgo(rec.hoursSince)}`}</div>
+              {recEx && <div className="text-muted">Last exercise: <span className="font-semibold text-white">{recEx.name}</span></div>}
+              <div className="tabular-nums text-muted">{rec.hoursRemaining > 0 ? hoursLeft(rec.hoursRemaining) : "Fully rested"}</div>
+            </div>
+          </div>
+        ) : (
         <div className="w-full min-w-0 flex-1 rounded-xl border border-line bg-card-2 p-4" aria-live="polite">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-lg font-bold">{MUSCLE_LABELS[sel]}</h3>
@@ -181,6 +314,7 @@ export default function Bodygraph({ muscles }: { muscles: Record<Muscle, MuscleR
             <p className="text-sm text-muted">No logged lifts target this muscle yet.</p>
           )}
         </div>
+        )}
       </div>
     </div>
   );
