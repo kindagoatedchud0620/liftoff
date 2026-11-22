@@ -6,6 +6,7 @@ import { buildSeed } from "@/data/seed";
 import { EXERCISE_MAP } from "@/data/exercises";
 import { DEFAULT_COMPANION_NAME, petProgress } from "@/lib/pet";
 import { newlyUnlocked } from "@/lib/trophies";
+import type { ArenaId } from "@/lib/arenas";
 import { rankFromE1rm, setE1rm } from "@/lib/ranking";
 import { exerciseBests, overallRank } from "@/lib/stats";
 import type { Measurement, Profile, Workout, WorkoutSet } from "@/lib/types";
@@ -27,6 +28,8 @@ export interface State {
   seeded: boolean;
   profile: Profile;
   companionName: string;
+  /** Training arena the user picked; null follows the best unlocked arena. */
+  arenaId: ArenaId | null;
   workouts: Workout[];
   measurements: Measurement[];
   active: Workout | null;
@@ -36,6 +39,7 @@ export interface State {
   updateProfile: (p: Partial<Profile>) => void;
   /** Returns false (and changes nothing) unless the trimmed name is 1 to 24 characters. */
   setCompanionName: (name: string) => boolean;
+  setArena: (id: ArenaId | null) => void;
   addMeasurement: (m: Measurement) => void;
 
   startWorkout: () => void;
@@ -65,6 +69,7 @@ export const useStore = create<State>()(
         seeded: false,
         profile: DEFAULT_PROFILE,
         companionName: DEFAULT_COMPANION_NAME,
+        arenaId: null,
         workouts: [],
         measurements: [],
         active: null,
@@ -75,6 +80,7 @@ export const useStore = create<State>()(
           set({ seeded: true, workouts, measurements, profile: { ...DEFAULT_PROFILE, ...profile } });
         },
         updateProfile: (p) => set({ profile: { ...get().profile, ...p } }),
+        setArena: (id) => set({ arenaId: id }),
         setCompanionName: (name) => {
           const clean = name.trim().replace(/\s+/g, " ");
           if (clean.length < 1 || clean.length > 24) return false;
@@ -168,8 +174,8 @@ export const useStore = create<State>()(
       version: 3,
       migrate: migrateState,
       partialize: (s) => {
-        const { seeded, profile, companionName, workouts, measurements, active, rest } = s;
-        return { seeded, profile, companionName, workouts, measurements, active, rest };
+        const { seeded, profile, companionName, arenaId, workouts, measurements, active, rest } = s;
+        return { seeded, profile, companionName, arenaId, workouts, measurements, active, rest };
       },
     },
   ),
@@ -181,7 +187,7 @@ export function migrateState(old: unknown): State {
   const { equippedTitle: _drop, ...profile } = (o.profile ?? DEFAULT_PROFILE) as Profile & { equippedTitle?: unknown };
   void _drop;
   const custom = o.companionName ?? (o.petName && o.petName !== "Barbell" ? o.petName : undefined);
-  return { seeded: o.seeded ?? false, profile, companionName: custom?.trim().slice(0, 24) || DEFAULT_COMPANION_NAME, workouts: o.workouts ?? [], measurements: o.measurements ?? [], active: o.active ?? null, rest: o.rest ?? { endsAt: null, duration: 90 } } as State;
+  return { seeded: o.seeded ?? false, profile, companionName: custom?.trim().slice(0, 24) || DEFAULT_COMPANION_NAME, arenaId: o.arenaId ?? null, workouts: o.workouts ?? [], measurements: o.measurements ?? [], active: o.active ?? null, rest: o.rest ?? { endsAt: null, duration: 90 } } as State;
 }
 
 /** Live rank of a single set, used by the logger badge and rank-up overlay. */

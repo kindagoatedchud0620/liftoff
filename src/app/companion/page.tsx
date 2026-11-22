@@ -3,9 +3,11 @@
 import { useState, useSyncExternalStore } from "react";
 import { Card, CardTitle, fmtDate, fmtNum } from "@/components/ui";
 import CompanionNameEditor from "@/components/pet/CompanionNameEditor";
-import WorkoutPet3D from "@/components/pet/WorkoutPet3D";
+import ArenaSelector from "@/components/pet/ArenaSelector";
+import CompanionSpeechBubble from "@/components/pet/CompanionSpeechBubble";
+import TrainingArena3D from "@/components/pet/TrainingArena3D";
 import { PET_STAGES, PET_XP } from "@/lib/pet";
-import { usePet, useRanks } from "@/store/derived";
+import { useCompanionMood, usePet, useRanks } from "@/store/derived";
 
 const MQ = "(min-width: 768px)";
 const subscribeMq = (cb: () => void) => {
@@ -31,11 +33,13 @@ function Lock() {
 
 export default function CompanionPage() {
   const pet = usePet();
+  const { arena, tired } = useCompanionMood();
   const accent = useRanks().overall?.tier.color ?? "#38BDF8";
   const [preview, setPreview] = useState<number | null>(null);
   const desktop = useSyncExternalStore(subscribeMq, () => window.matchMedia(MQ).matches, () => false);
 
   const shown = preview ?? pet.stage.index;
+  const previewingOther = shown !== pet.stage.index;
   const span = pet.nextLevelXp - pet.levelStartXp;
   const pct = Math.max(0, Math.min(100, ((pet.xp - pet.levelStartXp) / span) * 100));
 
@@ -46,8 +50,9 @@ export default function CompanionPage() {
         <p className="text-sm text-muted">Your Three-Dimensional Companion</p>
       </header>
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <WorkoutPet3D stage={shown} accent={accent} height={desktop ? 420 : 320} />
+        <Card className="relative">
+          {!previewingOther && <CompanionSpeechBubble className="absolute inset-x-3 top-3 z-10" />}
+          <TrainingArena3D arena={arena} stage={shown} accent={accent} tired={tired && !previewingOther} height={desktop ? 420 : 320} />
           <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted">
             <span>Drag to spin</span>
             {preview !== null && (
@@ -75,6 +80,8 @@ export default function CompanionPage() {
           </div>
         </Card>
       </div>
+
+      <ArenaSelector />
 
       <Card>
         <CardTitle>Evolution stages</CardTitle>

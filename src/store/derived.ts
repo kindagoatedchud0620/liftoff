@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { computeStreak } from "@/lib/gamification";
-import { petProgress } from "@/lib/pet";
+import { activeArena } from "@/lib/arenas";
+import { isTired, petProgress } from "@/lib/pet";
 import { exerciseBests, muscleRanks, overallRank } from "@/lib/stats";
 import { useStore } from "./useStore";
 
@@ -39,4 +40,12 @@ export function usePet() {
   const profile = useStore((s) => s.profile);
   const name = useStore((s) => s.companionName);
   return { name, ...useMemo(() => petProgress(workouts, profile), [workouts, profile]) };
+}
+
+/** Shared companion presentation: the arena to render and whether the streak makes it sleepy. */
+export function useCompanionMood() {
+  const picked = useStore((s) => s.arenaId);
+  const { overall } = useRanks();
+  const streak = useStreak();
+  return { arena: activeArena(picked, overall?.score ?? 1), tired: isTired(streak), hoursLeft: streak.hoursLeft };
 }

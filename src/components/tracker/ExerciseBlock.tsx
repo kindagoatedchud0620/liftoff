@@ -8,11 +8,18 @@ import { PET_XP } from "@/lib/pet";
 import type { RankUpEvent, WorkoutExercise, WorkoutSet } from "@/lib/types";
 import { liveSetRank, useStore } from "@/store/useStore";
 import { useRanks } from "@/store/derived";
+import { usePetEvents } from "@/store/petEvents";
 import { TierBadge } from "@/components/ui";
 import { RankBadge } from "@/components/ranks/RankBadge";
 
 const field = "h-11 w-full min-w-0 rounded-lg border border-line bg-card-2 px-1 text-center text-base tabular-nums outline-none placeholder:text-[10px] focus:border-accent";
 const num = (v: string) => (v === "" ? 0 : Math.max(0, parseFloat(v) || 0));
+
+/** A record beats the prior best Estimated One-Rep Max or single-set volume. No prior history means no record. */
+export function isSetRecord(now: { e1rm: number; volume: number }, prior: { e1rm: number; volume: number }): boolean {
+  if (prior.e1rm <= 0 && prior.volume <= 0) return false;
+  return now.e1rm > prior.e1rm || now.volume > prior.volume;
+}
 
 function SetRow({ exIdx, idx, set, exerciseId, onCheck }: { exIdx: number; idx: number; set: WorkoutSet; exerciseId: string; onCheck: (idx: number) => void }) {
   const updateSet = useStore((s) => s.updateSet);
@@ -60,12 +67,24 @@ export default function ExerciseBlock({ exIdx, we, onRankUp }: { exIdx: number; 
     updateSet(exIdx, idx, { done: true });
     startRest();
     if (s.reps <= 0 || !ex) return;
+    // History plus every other done set of this exercise in the workout (the checked set is still undone in this snapshot).
+    const prior = { e1rm: 0, volume: 0 };
+    for (const w of active ? [...workouts, active] : workouts)
+      for (const e of w.exercises)
+        if (e.exerciseId === we.exerciseId)
+          for (const o of e.sets)
+            if (o.done && o.reps > 0) {
+              prior.e1rm = Math.max(prior.e1rm, liveSetRank(we.exerciseId, o, profile).e1rm);
+              prior.volume = Math.max(prior.volume, o.weight * o.reps);
+            }
+    const record = isSetRecord({ e1rm: liveSetRank(we.exerciseId, s, profile).e1rm, volume: s.weight * s.reps }, prior);
+    usePetEvents.getState().react(record ? "CELEBRATE_RECORD" : "LIFTING_DUMBBELLS");
     const events: RankUpEvent[] = [];
     const now = liveSetRank(we.exerciseId, s, profile);
     const others = we.sets.filter((o, j) => j !== idx && o.done && o.reps > 0).map((o) => liveSetRank(we.exerciseId, o, profile).e1rm);
-    const prior = Math.max(best?.e1rm ?? 0, ...others);
-    if (prior > 0) {
-      const from = rankFromE1rm(ex, prior, profile.bodyweight, profile.sex);
+    const priorBest = Math.max(best?.e1rm ?? 0, ...others);
+    if (priorBest > 0) {
+      const from = rankFromE1rm(ex, priorBest, profile.bodyweight, profile.sex);
       if (now.rank.tier.index > from.tier.index) events.push({ label: ex.name, from, to: now.rank, xp: PET_XP.exerciseRankUp });
     } else {
       // First ranked set for this exercise: celebrate the starting rank. The pet only earns for promotions.

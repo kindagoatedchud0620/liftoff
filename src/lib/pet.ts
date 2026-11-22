@@ -3,6 +3,13 @@ import { MAJOR_PATTERNS, byDate } from "./stats";
 import { rankFromE1rm, rankFromScore, setE1rm } from "./ranking";
 import type { Profile, Workout } from "./types";
 
+/** Companion animation states. IDLE and TIRED_YAWN loop; the other two play once and blend back. */
+export type PetAction = "IDLE" | "LIFTING_DUMBBELLS" | "CELEBRATE_RECORD" | "TIRED_YAWN";
+
+/** The companion gets sleepy once the 72-hour streak window has fewer than this many hours left. */
+export const TIRED_HOURS = 12;
+export const isTired = (streak: { alive: boolean; hoursLeft: number }) => streak.alive && streak.hoursLeft < TIRED_HOURS;
+
 export const DEFAULT_COMPANION_NAME = "Atlas";
 /** Names offered by the Randomize Name button. */
 export const COMPANION_NAMES = ["Atlas", "Ironpaw", "Titanus", "Barbellius", "Spotter", "Kilo", "Colossus", "Valkyrie", "Boulder", "Apex"];

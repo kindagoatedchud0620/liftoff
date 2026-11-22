@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { useStore, type FinishResult } from "@/store/useStore";
 import { useNow } from "@/store/derived";
 import { fmtDate, fmtNum } from "@/components/ui";
+import CompanionMiniViewport from "./CompanionMiniViewport";
 import ExerciseBlock from "./ExerciseBlock";
 import ExercisePicker from "./ExercisePicker";
 import SessionSummaryModal from "./SessionSummaryModal";
@@ -70,6 +71,7 @@ export default function WorkoutLogger() {
       <div className="flex items-center gap-3">
         <input aria-label="Workout name" value={active.name} onChange={(e) => rename(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent text-lg font-bold outline-none focus:border-line" />
         <span className="shrink-0 text-sm text-muted tabular-nums" aria-label="Elapsed time">{elapsed}</span>
+        <CompanionMiniViewport />
       </div>
       {active.exercises.map((we, i) => <ExerciseBlock key={`${we.exerciseId}-${i}`} exIdx={i} we={we} onRankUp={(ev) => setQueue((q) => [...q, ...ev])} />)}
       <button data-testid="add-exercise" onClick={() => setPicker(true)} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-card font-semibold hover:border-accent">

@@ -2,6 +2,8 @@
 import assert from "node:assert/strict";
 import { buildSeed } from "../src/data/seed.ts";
 import { migrateState, useStore } from "../src/store/useStore.ts";
+import { activeArena, bestArena, isArenaUnlocked } from "../src/lib/arenas.ts";
+import { isTired } from "../src/lib/pet.ts";
 import { PET_XP, levelFromXp, petProgress, stageForLevel, xpForLevel } from "../src/lib/pet.ts";
 
 const profile = { name: "t", sex: "male", bodyweight: 180 } as const;
@@ -34,5 +36,21 @@ assert.equal(st.setCompanionName("x".repeat(25)), false);
 assert.equal(useStore.getState().companionName, "Atlas");
 assert.equal(st.setCompanionName("  Kilo  "), true);
 assert.equal(useStore.getState().companionName, "Kilo");
+
+// Arenas unlock every two tiers; a stale pick falls back to the best unlocked arena.
+assert.equal(bestArena(1), "garage");
+assert.equal(bestArena(220), "garage");
+assert.equal(bestArena(221), "warehouse");
+assert.equal(bestArena(457), "neon");
+assert.equal(bestArena(1000), "olympus");
+assert.ok(!isArenaUnlocked("olympus", 660));
+assert.equal(activeArena("garage", 457), "garage");
+assert.equal(activeArena("olympus", 457), "neon");
+assert.equal(activeArena(null, 457), "neon");
+assert.equal(migrateState({ petName: "Kilo" }).arenaId, null);
+// Sleepy only while the streak is alive and under 12 hours remain.
+assert.ok(isTired({ alive: true, hoursLeft: 11.9 }));
+assert.ok(!isTired({ alive: true, hoursLeft: 12 }));
+assert.ok(!isTired({ alive: false, hoursLeft: 0 }));
 
 console.log("pet-check: ok", { level: seeded.level, xp: seeded.xp });
