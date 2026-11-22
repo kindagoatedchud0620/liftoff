@@ -1,6 +1,7 @@
 // Self-check for pet progression: npx tsx --tsconfig tsconfig.json scripts/pet-check.mts
 import assert from "node:assert/strict";
 import { buildSeed } from "../src/data/seed.ts";
+import { migrateState, useStore } from "../src/store/useStore.ts";
 import { PET_XP, levelFromXp, petProgress, stageForLevel, xpForLevel } from "../src/lib/pet.ts";
 
 const profile = { name: "t", sex: "male", bodyweight: 180 } as const;
@@ -21,4 +22,17 @@ assert.ok(petProgress([w2, w1], profile).xp >= 2 * PET_XP.workout + PET_XP.recor
 const seeded = petProgress(buildSeed(Date.now()).workouts, profile);
 assert.equal(seeded.stage.name, "Heavyweight Guardian");
 assert.ok(seeded.xp < seeded.nextLevelXp);
+// Companion name: v2 saves migrate ("Barbell" was the old default), and names must be 1 to 24 characters.
+const mig = (petName?: string) => migrateState({ petName, profile, workouts: [] }).companionName;
+assert.equal(mig("Barbell"), "Atlas");
+assert.equal(mig(undefined), "Atlas");
+assert.equal(mig("Sir Squats"), "Sir Squats");
+const st = useStore.getState();
+assert.equal(st.companionName, "Atlas");
+assert.equal(st.setCompanionName("   "), false);
+assert.equal(st.setCompanionName("x".repeat(25)), false);
+assert.equal(useStore.getState().companionName, "Atlas");
+assert.equal(st.setCompanionName("  Kilo  "), true);
+assert.equal(useStore.getState().companionName, "Kilo");
+
 console.log("pet-check: ok", { level: seeded.level, xp: seeded.xp });

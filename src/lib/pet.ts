@@ -3,6 +3,10 @@ import { MAJOR_PATTERNS, byDate } from "./stats";
 import { rankFromE1rm, rankFromScore, setE1rm } from "./ranking";
 import type { Profile, Workout } from "./types";
 
+export const DEFAULT_COMPANION_NAME = "Atlas";
+/** Names offered by the Randomize Name button. */
+export const COMPANION_NAMES = ["Atlas", "Ironpaw", "Titanus", "Barbellius", "Spotter", "Kilo", "Colossus", "Valkyrie", "Boulder", "Apex"];
+
 /** Experience Points awarded to the pet. Derived from workout history, so it persists with the workouts. */
 export const PET_XP = { workout: 40, record: 15, exerciseRankUp: 50, overallRankUp: 100 };
 

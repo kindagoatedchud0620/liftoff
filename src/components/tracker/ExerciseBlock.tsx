@@ -67,6 +67,9 @@ export default function ExerciseBlock({ exIdx, we, onRankUp }: { exIdx: number; 
     if (prior > 0) {
       const from = rankFromE1rm(ex, prior, profile.bodyweight, profile.sex);
       if (now.rank.tier.index > from.tier.index) events.push({ label: ex.name, from, to: now.rank, xp: PET_XP.exerciseRankUp });
+    } else {
+      // First ranked set for this exercise: celebrate the starting rank. The pet only earns for promotions.
+      events.push({ label: ex.name, from: null, to: now.rank, xp: 0 });
     }
     if (active) {
       const checked = { ...active, exercises: active.exercises.map((e, i) => (i === exIdx ? { ...e, sets: e.sets.map((o, j) => (j === idx ? { ...o, done: true } : o)) } : e)) };

@@ -37,6 +37,6 @@ export function useStreak() {
 export function usePet() {
   const workouts = useStore((s) => s.workouts);
   const profile = useStore((s) => s.profile);
-  const name = useStore((s) => s.petName);
+  const name = useStore((s) => s.companionName);
   return { name, ...useMemo(() => petProgress(workouts, profile), [workouts, profile]) };
 }

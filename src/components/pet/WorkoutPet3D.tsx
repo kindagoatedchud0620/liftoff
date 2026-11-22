@@ -154,7 +154,7 @@ export default function WorkoutPet3D({ stage, accent, height = 320, className = 
     let nextBlink = 2;
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
-      const dt = Math.min(0.05, (now - last) / 1000);
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); // rAF timestamps can predate `last`
       last = now;
       t += dt;
 

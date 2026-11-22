@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Card, CardTitle, fmtNum } from "@/components/ui";
 import { useRanks, usePet } from "@/store/derived";
+import CompanionNameEditor from "./CompanionNameEditor";
 import WorkoutPet3D from "./WorkoutPet3D";
 
 export default function PetCard() {
@@ -13,9 +14,9 @@ export default function PetCard() {
   return (
     <Card>
       <CardTitle>Companion</CardTitle>
+      <CompanionNameEditor size="md" />
       <WorkoutPet3D stage={pet.stage.index} accent={accent} height={240} />
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="min-w-0 truncate text-lg font-bold">{pet.name}</span>
         <span className="rounded-md border border-line bg-card-2 px-2 py-0.5 text-[11px] font-bold tabular-nums">Level {pet.level}</span>
         <span className="text-sm text-muted">{pet.stage.name}</span>
       </div>

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { MeasurementsChart } from "@/components/analytics/MeasurementsChart";
-import { Card, CardTitle } from "@/components/ui";
+import RankBadge3D, { TIER_TITLES } from "@/components/ranks/RankBadge3D";
+import { Card, CardTitle, LpBar } from "@/components/ui";
+import { useRanks } from "@/store/derived";
 import { useStore } from "@/store/useStore";
 
 const FIELDS = [
@@ -23,6 +25,7 @@ const today = () => {
 
 export default function ProfilePage() {
   const { profile, measurements, updateProfile, addMeasurement } = useStore();
+  const { overall } = useRanks();
   const latest = measurements[measurements.length - 1];
   const [bw, setBw] = useState(String(profile.bodyweight));
   const [date, setDate] = useState(today);
@@ -60,6 +63,32 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <h1 className="text-xl font-bold">Profile</h1>
+
+      <Card>
+        <div className="flex items-center gap-4">
+          {overall && <RankBadge3D tier={overall.tier} size={160} className="shrink-0 max-sm:w-[128px]!" />}
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-lg font-bold">{profile.name}</div>
+            <div className="text-3xl font-black uppercase tracking-wide" style={{ color: overall?.tier.color }}>
+              {overall ? overall.tier.name : "Unranked"}
+            </div>
+            {overall && (
+              <div className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: overall.tier.color }}>
+                {TIER_TITLES[overall.tier.name]}
+              </div>
+            )}
+            <div className="mt-2 text-2xl font-bold tabular-nums">
+              {overall?.score ?? 0}
+              <span className="text-sm font-normal text-muted"> / 1000</span>
+            </div>
+            {overall && (
+              <div className="mt-2">
+                <LpBar rank={overall} />
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
 
       <Card>
         <CardTitle>Athlete</CardTitle>

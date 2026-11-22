@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { buildSeed } from "@/data/seed";
 import { EXERCISE_MAP } from "@/data/exercises";
-import { petProgress } from "@/lib/pet";
+import { DEFAULT_COMPANION_NAME, petProgress } from "@/lib/pet";
 import { rankFromE1rm, setE1rm } from "@/lib/ranking";
 import { exerciseBests, overallRank } from "@/lib/stats";
 import type { Measurement, Profile, Workout, WorkoutSet } from "@/lib/types";
@@ -23,7 +23,7 @@ export interface FinishResult {
 export interface State {
   seeded: boolean;
   profile: Profile;
-  petName: string;
+  companionName: string;
   workouts: Workout[];
   measurements: Measurement[];
   active: Workout | null;
@@ -31,7 +31,8 @@ export interface State {
 
   seed: () => void;
   updateProfile: (p: Partial<Profile>) => void;
-  setPetName: (name: string) => void;
+  /** Returns false (and changes nothing) unless the trimmed name is 1 to 24 characters. */
+  setCompanionName: (name: string) => boolean;
   addMeasurement: (m: Measurement) => void;
 
   startWorkout: () => void;
@@ -60,7 +61,7 @@ export const useStore = create<State>()(
       return {
         seeded: false,
         profile: DEFAULT_PROFILE,
-        petName: "Barbell",
+        companionName: DEFAULT_COMPANION_NAME,
         workouts: [],
         measurements: [],
         active: null,
@@ -71,7 +72,12 @@ export const useStore = create<State>()(
           set({ seeded: true, workouts, measurements, profile: { ...DEFAULT_PROFILE, ...profile } });
         },
         updateProfile: (p) => set({ profile: { ...get().profile, ...p } }),
-        setPetName: (name) => set({ petName: name.trim().slice(0, 24) || "Barbell" }),
+        setCompanionName: (name) => {
+          const clean = name.trim().replace(/\s+/g, " ");
+          if (clean.length < 1 || clean.length > 24) return false;
+          set({ companionName: clean });
+          return true;
+        },
         addMeasurement: (m) => set({ measurements: [...get().measurements, m].sort((a, b) => a.date.localeCompare(b.date)) }),
 
         startWorkout: () => {
@@ -153,21 +159,24 @@ export const useStore = create<State>()(
     },
     {
       name: "liftoff-store",
-      version: 2,
-      // Version 1 carried the Egg economy; keep the training data, drop the rest.
-      migrate: (old) => {
-        const o = old as Partial<State>;
-        const { equippedTitle: _drop, ...profile } = (o.profile ?? DEFAULT_PROFILE) as Profile & { equippedTitle?: unknown };
-        void _drop;
-        return { seeded: o.seeded ?? false, profile, petName: "Barbell", workouts: o.workouts ?? [], measurements: o.measurements ?? [], active: o.active ?? null, rest: o.rest ?? { endsAt: null, duration: 90 } } as State;
-      },
+      version: 3,
+      migrate: migrateState,
       partialize: (s) => {
-        const { seeded, profile, petName, workouts, measurements, active, rest } = s;
-        return { seeded, profile, petName, workouts, measurements, active, rest };
+        const { seeded, profile, companionName, workouts, measurements, active, rest } = s;
+        return { seeded, profile, companionName, workouts, measurements, active, rest };
       },
     },
   ),
 );
+
+// v1 carried the Egg economy (dropped); v2 stored the pet as petName with "Barbell" as its default.
+export function migrateState(old: unknown): State {
+  const o = old as Partial<State> & { petName?: string };
+  const { equippedTitle: _drop, ...profile } = (o.profile ?? DEFAULT_PROFILE) as Profile & { equippedTitle?: unknown };
+  void _drop;
+  const custom = o.companionName ?? (o.petName && o.petName !== "Barbell" ? o.petName : undefined);
+  return { seeded: o.seeded ?? false, profile, companionName: custom?.trim().slice(0, 24) || DEFAULT_COMPANION_NAME, workouts: o.workouts ?? [], measurements: o.measurements ?? [], active: o.active ?? null, rest: o.rest ?? { endsAt: null, duration: 90 } } as State;
+}
 
 /** Live rank of a single set, used by the logger badge and rank-up overlay. */
 export function liveSetRank(exerciseId: string, set: Pick<WorkoutSet, "weight" | "reps">, profile: Profile) {

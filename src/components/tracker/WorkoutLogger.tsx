@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { useStore, type FinishResult } from "@/store/useStore";
-import { useNow } from "@/store/derived";
+import { useNow, usePet } from "@/store/derived";
 import { fmtDate, fmtNum } from "@/components/ui";
 import ExerciseBlock from "./ExerciseBlock";
 import ExercisePicker from "./ExercisePicker";
@@ -29,6 +29,7 @@ export default function WorkoutLogger() {
   const now = useNow(1000);
   const [picker, setPicker] = useState(false);
   const [queue, setQueue] = useState<RankUpEvent[]>([]);
+  const petName = usePet().name;
   const [summary, setSummary] = useState<FinishResult | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
@@ -37,11 +38,11 @@ export default function WorkoutLogger() {
     <Overlay label="Workout complete">
       <h2 className="text-lg font-bold">Workout complete</h2>
       <dl className="my-4 space-y-2 text-sm tabular-nums">
-        <div className="flex justify-between"><dt className="text-muted">Experience Points earned</dt><dd className="font-bold text-accent">+{summary.xp}</dd></div>
+        <div className="flex justify-between"><dt className="text-muted">{petName} earned Experience Points</dt><dd className="font-bold text-accent">+{summary.xp}</dd></div>
         <div className="flex justify-between"><dt className="text-muted">Personal Records</dt><dd>{summary.records}</dd></div>
         <div className="flex justify-between"><dt className="text-muted">Rank ups</dt><dd>{summary.rankUps}</dd></div>
         {summary.overallRankUp && <div className="flex justify-between"><dt className="text-muted">Overall Liftoff Rank up</dt><dd className="font-bold text-accent">Yes</dd></div>}
-        <div className="flex justify-between gap-2"><dt className="text-muted">Companion level {summary.levelBefore} to {summary.levelAfter}</dt>{summary.levelAfter > summary.levelBefore && <dd className="font-bold text-accent">Level up!</dd>}</div>
+        <div className="flex justify-between gap-2"><dt className="text-muted">{summary.levelAfter > summary.levelBefore ? `${petName} grew from Level ${summary.levelBefore} to Level ${summary.levelAfter}` : `${petName} is Level ${summary.levelAfter}`}</dt>{summary.levelAfter > summary.levelBefore && <dd className="font-bold text-accent">Level up!</dd>}</div>
       </dl>
       <button autoFocus onClick={closeSummary} className="h-11 w-full rounded-lg bg-accent font-bold text-black">Done</button>
     </Overlay>

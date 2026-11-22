@@ -2,10 +2,10 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { Card, CardTitle, fmtDate, fmtNum } from "@/components/ui";
+import CompanionNameEditor from "@/components/pet/CompanionNameEditor";
 import WorkoutPet3D from "@/components/pet/WorkoutPet3D";
 import { PET_STAGES, PET_XP } from "@/lib/pet";
 import { usePet, useRanks } from "@/store/derived";
-import { useStore } from "@/store/useStore";
 
 const MQ = "(min-width: 768px)";
 const subscribeMq = (cb: () => void) => {
@@ -32,22 +32,19 @@ function Lock() {
 export default function CompanionPage() {
   const pet = usePet();
   const accent = useRanks().overall?.tier.color ?? "#38BDF8";
-  const setPetName = useStore((s) => s.setPetName);
-  const [draft, setDraft] = useState<string | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
   const desktop = useSyncExternalStore(subscribeMq, () => window.matchMedia(MQ).matches, () => false);
 
   const shown = preview ?? pet.stage.index;
   const span = pet.nextLevelXp - pet.levelStartXp;
   const pct = Math.max(0, Math.min(100, ((pet.xp - pet.levelStartXp) / span) * 100));
-  const commit = () => {
-    if (draft !== null) setPetName(draft);
-    setDraft(null);
-  };
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4">
-      <h1 className="text-xl font-bold">Companion</h1>
+      <header>
+        <CompanionNameEditor size="lg" />
+        <p className="text-sm text-muted">Your Three-Dimensional Companion</p>
+      </header>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <WorkoutPet3D stage={shown} accent={accent} height={desktop ? 420 : 320} />
@@ -62,18 +59,6 @@ export default function CompanionPage() {
         </Card>
 
         <Card className="space-y-4">
-          <div>
-            <label htmlFor="pet-name" className="text-[11px] uppercase tracking-wider text-muted">Name</label>
-            <input
-              id="pet-name"
-              value={draft ?? pet.name}
-              maxLength={24}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commit}
-              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-              className="mt-1 w-full rounded-lg border border-line bg-card-2 px-3 py-2 text-base font-bold"
-            />
-          </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md border border-line bg-card-2 px-2.5 py-1 text-sm font-bold tabular-nums">Level {pet.level}</span>
             <span className="font-semibold">{pet.stage.name}</span>
@@ -118,7 +103,7 @@ export default function CompanionPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardTitle>How to earn Experience Points</CardTitle>
+          <CardTitle>How {pet.name} earns Experience Points</CardTitle>
           <ul className="space-y-2 text-sm">
             {[
               ["Completing a workout", PET_XP.workout],
@@ -142,7 +127,7 @@ export default function CompanionPage() {
               {pet.milestones.slice(0, 12).map((m) => (
                 <li key={m.id} className="flex items-baseline gap-2">
                   <span className="w-14 shrink-0 text-xs text-muted tabular-nums">{fmtDate(m.date)}</span>
-                  <span className="min-w-0 flex-1">{m.text}</span>
+                  <span className="min-w-0 flex-1">{pet.name}: {m.text}</span>
                   <span className="shrink-0 text-xs font-bold text-accent tabular-nums">+{m.xp} Experience Points</span>
                 </li>
               ))}

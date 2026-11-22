@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import Bodygraph from "@/components/Bodygraph";
 import StreakCard from "@/components/gamification/StreakCard";
 import PetCard from "@/components/pet/PetCard";
-import RankBadge from "@/components/ranks/RankBadge";
+import RankBadge3D, { TIER_TITLES } from "@/components/ranks/RankBadge3D";
 import { Card, CardTitle, fmtDate, fmtNum, LpBar, Stat, TierBadge } from "@/components/ui";
 import { EXERCISE_MAP } from "@/data/exercises";
 import { nextTier } from "@/lib/ranking";
@@ -34,7 +34,7 @@ export default function Home() {
         <CardTitle>Overall Liftoff Rank</CardTitle>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
-            {overall && <RankBadge tier={overall.tier} size={88} className="shrink-0" />}
+            {overall && <RankBadge3D tier={overall.tier} size={150} className="shrink-0 max-sm:w-[120px]!" />}
             <div className="min-w-0">
             <div
               className="text-4xl font-black uppercase tracking-wide sm:text-5xl"
@@ -42,6 +42,11 @@ export default function Home() {
             >
               {overall ? overall.tier.name : "Unranked"}
             </div>
+            {overall && (
+              <div className="mt-0.5 text-xs font-semibold uppercase tracking-[0.2em]" style={{ color }}>
+                {TIER_TITLES[overall.tier.name]}
+              </div>
+            )}
             <div className="mt-1 text-sm text-muted">{profile.name}</div>
             </div>
           </div>

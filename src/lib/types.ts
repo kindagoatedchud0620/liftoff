@@ -107,7 +107,7 @@ export interface Rank {
 /** A tier promotion shown by the rank-up overlay (an exercise or the Overall Liftoff Rank). */
 export interface RankUpEvent {
   label: string;
-  from: Rank;
+  from: Rank | null; // null: the exercise's first ranked set (no promotion, so no Experience Points)
   to: Rank;
   xp: number; // Experience Points the pet earns once the workout is finished
 }
